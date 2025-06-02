@@ -37,4 +37,37 @@ public class Specialty {
 		return this.getName();
 	}
 
+	public String getName() {
+		// TODO Auto-generated method stub
+		return this.name;
+	}
+	
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+	
+	public void setId(String id) {
+		// TODO Auto-generated method stub
+		this.id = Integer.valueOf(id);
+	}
+	
+	public void setName(Integer name) {
+		// TODO Auto-generated method stub
+		this.name = String.valueOf(name);
+	}
+	
+	public void setName(String name, String id) {
+		// TODO Auto-generated method stub
+		this.name = name;
+		this.id = Integer.valueOf(id);
+	}
+	
+	public String getSpecialty() {
+		// TODO Auto-generated method stub
+		return this.name;
+	}
+	
+	
+
 }

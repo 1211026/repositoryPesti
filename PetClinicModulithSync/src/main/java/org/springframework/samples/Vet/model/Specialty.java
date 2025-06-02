@@ -37,4 +37,17 @@ public class Specialty {
 	public String toString() {
 		return this.getName();
 	}
+
+	private String getName() {
+		// TODO Auto-generated method stub
+		return this.name;
+	}
+	
+	
+	public Integer getId() {
+		return this.id;
+	}
+
+	
+	
 }

@@ -74,4 +74,37 @@ public class Owner implements Serializable {
 		this.pets = pets;
 	}
 
+	public String getLastName() {
+		return this.lastName;
+	}
+
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+	
+	public String getFirstName() {
+		return this.firstName;
+	}
+	
+	public String getAddress() {
+		return this.address;
+	}
+	
+	public String getCity() {
+		return this.city;
+	}
+	
+	public String getTelephone() {
+		return this.telephone;
+	}
+	
+	public List<OwnerPet> getPets() {
+		return this.pets;
+	}
+	
+	
+	
+	
+
 }

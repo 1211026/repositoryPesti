@@ -28,6 +28,8 @@ public class PetType implements Serializable {
 		return this.getName();
 	}
 
+	
+
 	public void setId(Integer id) {
 		this.id = id;
 	}
@@ -36,4 +38,13 @@ public class PetType implements Serializable {
 		this.name = name;
 	}
 
+	public Integer getId() {
+		return id;
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	
 }

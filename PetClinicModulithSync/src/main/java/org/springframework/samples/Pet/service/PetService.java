@@ -1,12 +1,18 @@
 package org.springframework.samples.Pet.service;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.samples.Owner.OwnerPublicAPI;
 import org.springframework.samples.Pet.PetExternalAPI;
 import org.springframework.samples.Pet.PetPublicAPI;
 import org.springframework.samples.Pet.model.Pet;
 import org.springframework.samples.Pet.model.PetType;
+import org.springframework.samples.notifications.SavePetEvent;
 import org.springframework.stereotype.Service;
+
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -20,6 +26,18 @@ public class PetService implements PetExternalAPI, PetPublicAPI {
     private final PetRepository petRepository;
     private final PetTypeRepository petTypeRepository;
     private final OwnerPublicAPI ownerPublicAPI;
+    
+    private final ApplicationEventPublisher events; // Supondo que você tenha um ApplicationEvents para publicar eventos
+    
+    
+    @Autowired
+    public PetService(PetRepository petRepository, PetTypeRepository petTypeRepository, OwnerPublicAPI ownerPublicAPI, ApplicationEventPublisher events) {
+		this.petRepository = petRepository;
+		this.petTypeRepository = petTypeRepository;
+		this.ownerPublicAPI = ownerPublicAPI;
+		this.events = events;
+	}
+    
     @Override
     public Collection<PetType> findPetTypes() {
         return petTypeRepository.findPetTypes();
@@ -34,16 +52,82 @@ public class PetService implements PetExternalAPI, PetPublicAPI {
     public Optional<Pet> getPetByName(String name, boolean isNew) {
         return petRepository.findPetByName(name);
     }
-
+    
     @Override
+    @Transactional
     public void save(Pet pet) {
         boolean isNew = (pet.getId() == null);
-        petRepository.save(pet, isNew);
-        ownerPublicAPI.savePet(pet.getId(), pet.getName(), pet.getType().getName(), pet.getOwner_id(), pet.getBirthDate());
+        
+        // Verificar se o owner_id está definido
+        if (pet.getOwner_id() == null || pet.getOwner_id() == 0) {
+            System.err.println("ERRO: owner_id não definido para o pet " + pet.getName());
+            throw new IllegalArgumentException("owner_id não pode ser nulo ou zero");
+        }
+        
+        // Verificar se o tipo está definido
+        if (pet.getType() == null) {
+            System.err.println("ERRO: tipo não definido para o pet " + pet.getName());
+            throw new IllegalArgumentException("tipo não pode ser nulo");
+        }
+        
+        // Salvar o pet no banco de dados
+        try {
+            petRepository.save(pet, isNew);
+            System.out.println("Pet salvo com sucesso. ID: " + pet.getId() + ", Nome: " + pet.getName() + ", Owner ID: " + pet.getOwner_id());
+            
+            // Obter o ID do owner e do pet após salvar
+            Integer ownerId = pet.getOwner_id();
+            Integer petId = pet.getId();
+            String petName = pet.getName();
+            LocalDate birthDate = pet.getBirthDate();
+            
+            // Extrair o nome do tipo
+            String typeName = "";
+            if (pet.getType() != null) {
+                if (pet.getType() instanceof PetType) {
+                    typeName = ((PetType) pet.getType()).getName();
+                } else if (pet.getType().getName() != null) {
+                    typeName = pet.getType().getName();
+                } else {
+                    typeName = pet.getType().toString();
+                }
+            }
+            
+            // Chamar o método do OwnerService para associar o pet ao owner
+            try {
+                ownerPublicAPI.savePet(petId, petName, typeName, ownerId, birthDate);
+                System.out.println("Pet associado ao owner com sucesso. Pet ID: " + petId + ", Owner ID: " + ownerId);
+                
+                // Publicar evento
+                try {
+                    Integer typeId = pet.getType() != null ? pet.getType().getId() : null;
+                    SavePetEvent event = new SavePetEvent(petId, petName, birthDate, typeId, typeName, ownerId, isNew);
+                    events.publishEvent(event);
+                    System.out.println("Evento SavePetEvent publicado com sucesso: " + event);
+                } catch (Exception e) {
+                    System.err.println("Erro ao publicar evento SavePetEvent: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } catch (Exception e) {
+                System.err.println("Erro ao associar pet ao owner: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao salvar pet: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
-
+    
     @Override
     public void saveVisit(Integer id, LocalDate date, String description, Integer pet_id) {
         petRepository.save(new Pet.Visit(id,description,date,pet_id));
     }
+    
+    @Override
+    public Pet findById(int petId) {
+		return petRepository.findById(petId);
+	}
+    
+
 }

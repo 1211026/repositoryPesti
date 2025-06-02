@@ -94,4 +94,19 @@ public class OwnerRepositoryImpl implements OwnerRepository {
 				.query(Owner.class)
 				.optional();
 	}
+	
+	@Override
+	public Page<Owner> findAll(Pageable pageable) {
+		String sql = "SELECT * FROM owners";
+		List<Owner> owners = jdbcClient.sql(sql)
+				.query(Owner.class)
+				.list();
+
+		int total = jdbcClient.sql("SELECT COUNT(*) FROM owners")
+				.query(Integer.class)
+				.single();
+
+		return new PageImpl<>(owners, pageable, total);
+	}
+	
 }

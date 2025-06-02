@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,9 +32,15 @@ import java.util.Map;
 public class OwnerController {
     private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
-    @Autowired
+    
     private final OwnerExternalAPI ownerExternalAPI;
 
+    
+    @Autowired
+    public OwnerController(@Qualifier("ownerService")OwnerExternalAPI ownerExternalAPI) {
+		this.ownerExternalAPI = ownerExternalAPI;
+	}
+    
     @InitBinder
     public void setAllowedFields(WebDataBinder dataBinder) {
         dataBinder.setDisallowedFields("id");

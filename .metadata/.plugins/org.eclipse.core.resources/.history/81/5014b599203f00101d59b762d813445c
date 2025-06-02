@@ -1,0 +1,200 @@
+package org.springframework.samples.Owner.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import org.jmolecules.ddd.types.ValueObject;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.samples.Pet.model.PetType;
+
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+@Getter
+@Entity
+@Table(name = "owner_pets")
+public class OwnerPet {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @NotNull
+    @Column(name = "name")
+    private String name;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @NotNull
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @NotNull
+    @Column(name = "owner_id")
+    private Integer owner_id;
+
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "pet_id")
+    private Set<Visit> visits;
+
+    @NotNull
+    @Column(name = "type_name")
+    private String type_name;
+
+    public OwnerPet(Integer id, String name, LocalDate birthDate, Integer owner_id, String type) {
+        this.id = id;
+        this.name = name;
+        this.birthDate = birthDate;
+        this.owner_id = owner_id;
+        this.type_name = type;
+    }
+
+    public OwnerPet() {
+    }
+
+    @Entity
+    @Table(name = "owner_visits")
+    public static class Visit implements ValueObject {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Integer id;
+        
+        @Column(name = "description")
+        private String description;
+        
+        @Column(name = "visit_date")
+        private LocalDate visit_date;
+        
+        @Column(name = "pet_id")
+        private Integer pet_id;
+        
+        public Visit(Integer id, String description, LocalDate visit_date, Integer pet_id) {
+            this.id = id;
+            this.description = description;
+            this.visit_date = visit_date;
+            this.pet_id = pet_id;
+        }
+        
+        public Visit() {
+        }
+        
+        // Getters e setters
+        public Integer getId() { return id; }
+        public String getDescription() { return description; }
+        public LocalDate getVisit_date() { return visit_date; }
+        public Integer getPet_id() { return pet_id; }
+
+		public void setDate(LocalDate visit_date2) {
+						this.visit_date = visit_date2;
+		}
+
+		public void setId(Integer id) {
+			this.id = id;
+		}
+
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		public void setPet_id(Integer pet_id) {
+			this.pet_id = pet_id;
+			
+		}
+
+		public Integer id() {
+			
+			return id;
+		}
+    }
+
+    // Métodos setter
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public void setOwner_id(Integer owner_id) {
+        this.owner_id = owner_id;
+    }
+
+    public void setType_name(String type_name) {
+        this.type_name = type_name;
+    }
+    
+    public void setVisits(Set<Visit> visits) {
+        this.visits = visits;
+    }
+
+    @Override
+    public String toString() {
+        return this.getName();
+    }
+
+    // Métodos getter simplificados e consistentes
+    public String getName() {
+        return name;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+    
+    public Integer getOwner_id() {
+        return owner_id;
+    }
+    
+    public String getType_name() {
+        return type_name;
+    }
+    
+    public Set<Visit> getVisits() {
+        if (this.visits == null) {
+            this.visits = new LinkedHashSet<>();
+        }
+        return this.visits;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+	public void setType(PetType type) {
+		if (type != null) {
+			this.type_name = type.getName();
+		} else {
+			this.type_name = null;
+		}
+		
+	}
+
+	public void addVisit(Visit petVisit) {
+		
+				if (petVisit == null) {
+			throw new IllegalArgumentException("Visita não pode ser nula");
+		}
+		
+		if (this.visits == null) {
+			this.visits = new LinkedHashSet<>();
+		}
+		
+		// Verificar se a visita já existe
+		boolean visitExists = this.visits.stream()
+				.anyMatch(existingVisit -> existingVisit.getId() != null && existingVisit.getId().equals(petVisit.getId()));
+		
+		if (!visitExists) {
+			petVisit.setPet_id(this.id);
+			this.visits.add(petVisit);
+			System.out.println("Visita adicionada ao pet: " + petVisit.getDescription() + " (Pet ID: " + this.id + ")");
+		} else {
+			System.out.println("Visita já existe para o pet: " + petVisit.getDescription());
+		}
+		
+	}
+}

@@ -9,6 +9,11 @@ import lombok.Getter;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import org.springframework.samples.Owner.model.OwnerPet.Visit;
+import org.springframework.samples.Pet.model.Pet;
+import org.springframework.samples.Pet.model.PetType;
 
 
 @Getter
@@ -76,5 +81,106 @@ public class Owner implements Serializable {
         this.pets = pets;
     }
 
+	public String getFirstName() {
+		// TODO Auto-generated method stub
+		return this.firstName;
+	}
+	
+	public String getLastName() {
+		// TODO Auto-generated method stub
+		return this.lastName;
+	}
+	
+	public String getAddress() {
+		// TODO Auto-generated method stub
+		return this.address;
+	}
+	
+	public String getCity() {
+		// TODO Auto-generated method stub
+		return this.city;
+	}
+	
+	public String getTelephone() {
+		// TODO Auto-generated method stub
+		return this.telephone;
+	}
+	
+	public List<OwnerPet> getPets() {
+		// TODO Auto-generated method stub
+		return this.pets;
+	}
+	
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+	
+	
+	public void addPet(OwnerPet pet) {
+	    if (this.pets == null) {
+	        this.pets = new ArrayList<>();
+	    }
+	    
+	    // Verificar se o pet já existe na lista
+	    boolean petExists = false;
+	    for (OwnerPet existingPet : this.pets) {
+	        if (existingPet.getId() != null && existingPet.getId().equals(pet.getId())) {
+	            petExists = true;
+	            break;
+	        }
+	        
+	        // Se o ID for nulo, verificar pelo nome
+	        if (existingPet.getName() != null && existingPet.getName().equals(pet.getName())) {
+	            petExists = true;
+	            break;
+	        }
+	    }
+	    
+	    // Adicionar o pet apenas se ele não existir na lista
+	    if (!petExists) {
+	        pet.setOwner_id(this.id);
+	        this.pets.add(pet);
+	        System.out.println("Pet adicionado ao owner: " + pet.getName() + " (Owner ID: " + this.id + ")");
+	    } else {
+	        System.out.println("Pet já existe na lista do owner: " + pet.getName());
+	    }
+	}
 
-}
+	public void addPet(OwnerPet pet, Set<OwnerPet.Visit> visits) {
+	    if (pet == null) {
+	        throw new IllegalArgumentException("Pet não pode ser nulo");
+	    }
+	    
+	    // Criar um novo Pet a partir do OwnerPet
+	    Pet newPet = new Pet();
+	    newPet.setId(pet.getId());
+	    newPet.setName(pet.getName());
+	    newPet.setBirthDate(pet.getBirthDate());
+	    
+	    // Criar um tipo para o pet
+	    PetType type = new PetType();
+	    type.setName(pet.getType_name());
+	    newPet.setType(type);
+	    
+	    // Adicionar visitas ao pet
+	    if (visits != null && !visits.isEmpty()) {
+	        for (Visit visit : visits) {
+	            Visit newVisit = new Visit();
+	            newVisit.setId(visit.id());
+	            newVisit.setDate(visit.getVisit_date());
+	            newVisit.setDescription(visit.getDescription());
+	            newPet.addVisit(newVisit);
+	        }
+	    }
+	    
+	    // Adicionar o pet à lista de pets do owner
+	    if (this.pets == null) {
+	        this.pets = new ArrayList<>();
+	    }
+	    this.pets.add(pet);
+	    
+	    System.out.println("Pet adicionado ao owner: " + newPet.getName() + " (ID: " + newPet.getId() + ")");
+	}
+	}
+

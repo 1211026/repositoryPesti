@@ -1,6 +1,8 @@
 package org.springframework.samples.Visit.service;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.samples.notifications.AddVisitEvent;
 import org.springframework.samples.Visit.VisitExternalAPI;
@@ -17,6 +19,12 @@ public class VisitManagement implements VisitExternalAPI {
 	private final VisitRepository visitRepository;
 
 	private final ApplicationEventPublisher eventPublisher;
+	
+	@Autowired
+	public VisitManagement(VisitRepository visitRepository, ApplicationEventPublisher eventPublisher) {
+		this.visitRepository = visitRepository;
+		this.eventPublisher = eventPublisher;
+	}
 
 	@Override
 	@Transactional

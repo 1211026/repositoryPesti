@@ -1,6 +1,8 @@
 package org.springframework.samples.Owner.service;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,13 @@ public class OwnerManagement implements OwnerExternalAPI {
 
 	private final OwnerPetRepository petRepository;
 
+	
+	@Autowired
+	public OwnerManagement(OwnerRepository repository, OwnerPetRepository petRepository) {
+		this.repository = repository;
+		this.petRepository = petRepository;
+	}
+	
 	@Override
 	public Owner findById(Integer id) {
 		Owner owner = repository.findById(id);

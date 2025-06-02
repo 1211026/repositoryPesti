@@ -1,0 +1,5 @@
+package org.springframework.samples.Owner.controller;
+
+public class OwnerRestController {
+
+}

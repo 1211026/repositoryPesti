@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workingSetManager>
+<workingSet editPageId="org.eclipse.jdt.internal.ui.DynamicSourcesWorkingSet" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1748602798234_0" label="Java Main Sources" name="Java Main Sources"/>
+<workingSet editPageId="org.eclipse.jdt.internal.ui.DynamicSourcesWorkingSet" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1748602798251_1" label="Java Test Sources" name="Java Test Sources"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1748602873211_3" label="spring-petclinic" name="spring-petclinic">
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/spring_modulith" type="4"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/PetClinicModulithAsync" type="4"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/PetClinicModulithSync" type="4"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/PetClinicMonolith" type="4"/>
+</workingSet>
+<workingSet aggregate="true" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1748602799314_2" label="Window Working Set" name="Aggregate for window 1748602799313"/>
+</workingSetManager>

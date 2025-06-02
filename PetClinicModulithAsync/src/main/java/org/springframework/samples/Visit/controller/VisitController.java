@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.Visit.VisitExternalAPI;
 import org.springframework.samples.Visit.model.Visit;
 import org.springframework.stereotype.Controller;
@@ -24,6 +26,11 @@ import java.util.Map;
 public class VisitController {
 
 	private final VisitExternalAPI visitExternalAPI;
+	
+	@Autowired
+	public VisitController(VisitExternalAPI visitExternalAPI) {
+		this.visitExternalAPI = visitExternalAPI;
+	}
 
 	@InitBinder
 	public void setAllowedFields(WebDataBinder dataBinder) {

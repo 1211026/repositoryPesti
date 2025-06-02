@@ -1,22 +1,42 @@
 package org.springframework.samples.Pet.repository;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.samples.Owner.OwnerPublicAPI;
 import org.springframework.samples.Pet.model.Pet;
 import org.springframework.samples.Pet.service.PetRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+
+import javax.sql.DataSource;
 
 @Repository
 public class PetRepositoryImpl implements PetRepository {
 
-	private final JdbcClient jdbcClient;
 
-	public PetRepositoryImpl(@Qualifier("petJdbcClient") JdbcClient jdbcClient) {
-		this.jdbcClient = jdbcClient;
-	}
+
+	    private final JdbcClient jdbcClient;
+	    private final JdbcTemplate jdbcTemplate;
+	    
+	    private final OwnerPublicAPI ownerPublicAPI;
+	    
+
+	    public PetRepositoryImpl(@Qualifier("petJdbcClient") JdbcClient jdbcClient, 
+	                            @Qualifier("petDataSource") DataSource dataSource, OwnerPublicAPI ownerPublicAPI) {
+	        this.jdbcClient = jdbcClient;
+	        this.jdbcTemplate = new JdbcTemplate(dataSource);
+	        this.ownerPublicAPI = ownerPublicAPI;
+	    }
+	    
+
 
 	@Override
 	public List<Pet> findPetByOwnerId(Integer id) {
@@ -44,16 +64,54 @@ public class PetRepositoryImpl implements PetRepository {
 
 	@Override
 	public void save(Pet pet, boolean isNew) {
-		if (isNew) {
-			jdbcClient.sql("INSERT INTO pets (name, owner_id, type_id,birth_date ) VALUES (?, ?, ?, ?)")
-					.params(pet.getName(), pet.getOwner_id(), pet.getType().getId(), pet.getBirthDate())
-					.update();
-		} else {
-			jdbcClient.sql("UPDATE pets SET name = ?, owner_id = ?, type_id = ?, birth_date = ? WHERE id = ?")
-					.params(pet.getName(), pet.getOwner_id(), pet.getType().getId(), pet.getBirthDate(), pet.getId())
-					.update();
-		}
+	    if (isNew) {
+	        KeyHolder keyHolder = new GeneratedKeyHolder();
+	        
+	        // Usar JdbcTemplate em vez de JdbcClient para poder usar KeyHolder
+	        jdbcTemplate.update(
+	            connection -> {
+	                PreparedStatement ps = connection.prepareStatement(
+	                    "INSERT INTO pets (name, owner_id, type_id, birth_date) VALUES (?, ?, ?, ?)",
+	                    Statement.RETURN_GENERATED_KEYS
+	                );
+	                ps.setString(1, pet.getName());
+	                ps.setInt(2, pet.getOwner_id());
+	                ps.setInt(3, pet.getType().getId());
+	                
+	                // Converter birthDate para java.sql.Date se necessário
+	                if (pet.getBirthDate() instanceof LocalDate) {
+	                    ps.setDate(4, java.sql.Date.valueOf((LocalDate) pet.getBirthDate()));
+	                } else {
+	                    ps.setObject(4, pet.getBirthDate());
+	                }
+	                
+	                return ps;
+	            },
+	            keyHolder
+	        );
+	        
+	        // Obter o ID gerado e atribuí-lo ao pet
+	        Number key = keyHolder.getKey();
+	        if (key != null) {
+	            pet.setId(key.intValue());
+	            System.out.println("Pet salvo com ID: " + pet.getId());
+	        }
+	    } else {
+	        jdbcTemplate.update(
+	            "UPDATE pets SET name = ?, owner_id = ?, type_id = ?, birth_date = ? WHERE id = ?",
+	            pet.getName(), 
+	            pet.getOwner_id(), 
+	            pet.getType().getId(), 
+	            pet.getBirthDate() instanceof LocalDate ? 
+	                java.sql.Date.valueOf((LocalDate) pet.getBirthDate()) : 
+	                pet.getBirthDate(),
+	            pet.getId()
+	        );
+	        System.out.println("Pet atualizado com ID: " + pet.getId());
+	    }
 	}
+
+	
 
 	@Override
 	public void save(Pet.Visit petVisit) {
@@ -62,4 +120,40 @@ public class PetRepositoryImpl implements PetRepository {
 				.update();
 
 	}
+	
+	@Override
+	public List<Pet.Visit> findVisitByPetId(Integer id) {
+		return jdbcClient.sql("SELECT * FROM pet_visit WHERE pet_id = ?")
+				.param(id)
+				.query(Pet.Visit.class)
+				.list();
+	}
+	
+	@Override
+	public List<Pet> findAll() {
+		return jdbcClient.sql("SELECT * FROM pets")
+				.query(Pet.class)
+				.list();
+	}
+	
+	@Override
+	public Pet findById(int petId) {
+		return jdbcClient.sql("SELECT * FROM pets WHERE id = ?")
+				.param(petId)
+				.query(Pet.class)
+				.optional()
+				.orElse(null);
+	}
+	
+	@Override
+	public void save(Pet pet) {
+	    boolean isNew = (pet.getId() == null);
+	    save(pet, isNew);
+	}
+
+
+
+	
+	
+	
 }

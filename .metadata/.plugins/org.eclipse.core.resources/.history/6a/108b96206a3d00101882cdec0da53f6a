@@ -1,0 +1,49 @@
+
+# database init, supports mysql too
+database=h2
+
+spring.h2.console.enabled=true
+
+
+app.datasource.owner.url=jdbc:h2:mem:owner
+app.datasource.owner.username=sa
+app.datasource.owner.password=password
+
+app.datasource.pet.url=jdbc:h2:mem:pet
+app.datasource.pet.username=sa
+app.datasource.pet.password=password
+
+app.datasource.vet.url=jdbc:h2:mem:vet
+app.datasource.vet.username=sa
+app.datasource.vet.password=password
+
+app.datasource.visit.url=jdbc:h2:mem:visit
+app.datasource.visit.username=sa
+app.datasource.visit.password=password
+
+#spring.sql.init.schema-locations=classpath*:db/${database}/schema.sql
+#spring.sql.init.data-locations=classpath*:db/${database}/data.sql
+#API docs - Swagger
+# Web
+spring.thymeleaf.mode=HTML
+
+# JPA
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.open-in-view=true
+
+# Internationalization
+spring.messages.basename=messages/messages
+
+# Actuator
+management.endpoints.web.exposure.include=*
+
+# Logging
+logging.level.org.springframework=INFO
+# logging.level.org.springframework.web=DEBUG
+# logging.level.org.springframework.context.annotation=TRACE
+
+# Maximum time static resources should be cached
+spring.web.resources.cache.cachecontrol.max-age=12h
+
+
+

@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.Pet.PetExternalAPI;
 import org.springframework.samples.Pet.model.Pet;
 import org.springframework.samples.Pet.model.PetType;
@@ -30,6 +32,11 @@ public class PetController {
 	private static final String VIEWS_PETS_CREATE_OR_UPDATE_FORM = "pets/createOrUpdatePetForm";
 
 	private final PetExternalAPI petExternalAPI;
+	
+	@Autowired
+	public PetController(PetExternalAPI petExternalAPI) {
+		this.petExternalAPI = petExternalAPI;
+	}
 
 	@ModelAttribute("types")
 	public Collection<PetType> populatePetTypes() {

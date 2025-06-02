@@ -49,5 +49,22 @@ public class VisitRepositoryImpl implements VisitRepository {
 				.optional()
 				.orElse(null);
 	}
+	
+	@Override
+	public List<Visit> findByPetId(int petId) {
+		return jdbcClient.sql("SELECT * FROM visits WHERE pet_id = ?")
+				.param(petId)
+				.query(Visit.class)
+				.list();
+	}
+	
+	@Override
+	public Visit findById(int visitId) {
+		return jdbcClient.sql("SELECT * FROM visits WHERE id = ?")
+				.param(visitId)
+				.query(Visit.class)
+				.optional()
+				.orElse(null);
+	}
 
 }

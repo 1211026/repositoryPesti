@@ -8,6 +8,7 @@ import lombok.Getter;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
+import java.util.function.IntPredicate;
 
 
 @Getter
@@ -51,6 +52,26 @@ public class Visit {
 
 	public boolean isNew() {
 		return this.id == null;
+	}
+
+	public String getDescription() {
+		// TODO Auto-generated method stub
+		return this.description;
+	}
+
+	public LocalDate getDate() {
+		// TODO Auto-generated method stub
+		return this.date;
+	}
+
+	public Integer getPet_id() {
+		// TODO Auto-generated method stub
+		return this.pet_id;
+	}
+
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
 	}
 
 }

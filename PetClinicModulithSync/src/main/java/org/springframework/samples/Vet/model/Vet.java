@@ -81,4 +81,11 @@ public class Vet{
 		getSpecialtiesInternal().add(specialty);
 	}
 
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+	
+	
+
 }

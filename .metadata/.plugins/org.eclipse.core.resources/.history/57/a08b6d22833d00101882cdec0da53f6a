@@ -1,0 +1,95 @@
+package org.springframework.samples.Vet.controller;
+
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.samples.Vet.VetExternalAPI;
+import org.springframework.samples.Vet.model.Vet;
+import org.springframework.samples.Vet.model.Vets;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+@Tag(name = "vet-rest-controller", description = "Operations about veterinarians")
+public class VetRestController {
+
+    private final VetExternalAPI vetExternalAPI;
+    
+    @Autowired
+    public VetRestController(VetExternalAPI vetExternalAPI) {
+        this.vetExternalAPI = vetExternalAPI;
+    }
+
+    @GetMapping("/vets")
+    @Operation(summary = "Get all vets")
+    public ResponseEntity<Vets> getAllVets() {
+        Vets vets = new Vets();
+        vets.getVetList().addAll(this.vetExternalAPI.findAll());
+        return new ResponseEntity<>(vets, HttpStatus.OK);
+    }
+    
+    @GetMapping("/vets/list")
+    @Operation(summary = "Get paginated list of vets")
+    public ResponseEntity<Map<String, Object>> getVetsPaginated(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Ajustar página para base 0 para o PageRequest
+            Pageable pageable = PageRequest.of(page - 1, size);
+            Page<Vet> pageVets = this.vetExternalAPI.findAll(pageable);
+            
+            List<Vet> vets = pageVets.getContent();
+            
+            response.put("vets", vets);
+            response.put("currentPage", page);
+            response.put("totalItems", pageVets.getTotalElements());
+            response.put("totalPages", pageVets.getTotalPages());
+            
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    @GetMapping("/vets/{vetId}")
+    @Operation(summary = "Get vet by ID")
+    public ResponseEntity<?> getVet(@PathVariable("vetId") int vetId) {
+        try {
+            // Buscar todos os vets e filtrar pelo ID
+            List<Vet> allVets = (List<Vet>) this.vetExternalAPI.findAll();
+            Vet vet = allVets.stream()
+                .filter(v -> v.getId() != null && v.getId().equals(vetId))
+                .findFirst()
+                .orElse(null);
+                
+            if (vet == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("error", "Vet not found with ID: " + vetId);
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+            
+            return new ResponseEntity<>(vet, HttpStatus.OK);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+}

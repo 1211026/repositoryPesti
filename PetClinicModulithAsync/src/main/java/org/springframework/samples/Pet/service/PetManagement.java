@@ -2,6 +2,7 @@ package org.springframework.samples.Pet.service;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.samples.notifications.SavePetEvent;
@@ -25,6 +26,13 @@ public class PetManagement implements PetExternalAPI {
 	private final PetTypeRepository petTypeRepository;
 
 	private final ApplicationEventPublisher events;
+	
+	@Autowired
+	public PetManagement(PetRepository petRepository, PetTypeRepository petTypeRepository, ApplicationEventPublisher events) {
+		this.petRepository = petRepository;
+		this.petTypeRepository = petTypeRepository;
+		this.events = events;
+	}
 
 	@Override
 	public Collection<PetType> findPetTypes() {

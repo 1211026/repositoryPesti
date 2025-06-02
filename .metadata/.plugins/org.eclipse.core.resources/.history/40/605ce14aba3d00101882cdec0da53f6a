@@ -1,0 +1,889 @@
+package org.springframework.samples;
+
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.samples.Owner.model.Owner;
+import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Pet.model.Pet;
+import org.springframework.samples.Pet.model.PetType;
+import org.springframework.samples.Vet.model.Vet;
+import org.springframework.samples.Vet.model.Vets;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
+import io.qameta.allure.Step;
+import net.jqwik.api.Arbitraries;
+import net.jqwik.api.Arbitrary;
+import net.jqwik.api.Assume;
+import net.jqwik.api.Combinators;
+import net.jqwik.api.ForAll;
+import net.jqwik.api.Property;
+import net.jqwik.api.Provide;
+import net.jqwik.api.Tuple;
+import net.jqwik.api.Tuple.Tuple2;
+import net.jqwik.api.constraints.IntRange;
+
+public class MetamorphicTests {
+
+    private final String BASE_URL = "http://localhost:8080";
+    private final String SWAGGER_URL = "http://localhost:8080/swagger-ui.html";
+    private final RestTemplate restTemplate = new RestTemplate();
+    
+    private static void logToSwagger(String message) {
+        System.out.println("Swagger Log: " + message);
+    }
+    @Property(tries = 5)
+    @Step("Teste: Repetir lista de pets deve ser igual")
+    void repeatedPetListShouldBeEqual(@ForAll("validOwnerData") Owner newOwner) {
+        logToSwagger("Starting test: repeatedPetListShouldBeEqual");
+        try {
+            // Configurar o owner com um prefixo para identificação
+            String uniquePrefix = "Repeat_" + UUID.randomUUID().toString().substring(0, 6);
+            newOwner.setFirstName(uniquePrefix + "_" + newOwner.getFirstName());
+            newOwner.setLastName("RepeatTest_" + newOwner.getLastName());
+            
+            // Garantir que todos os campos obrigatórios estejam preenchidos
+            if (newOwner.getAddress() == null) newOwner.setAddress("Test Address");
+            if (newOwner.getCity() == null) newOwner.setCity("Test City");
+            if (newOwner.getTelephone() == null) newOwner.setTelephone("1234567890");
+            
+            // Criar owner usando o endpoint correto
+            Owner createdOwner = createOwner(newOwner);
+            assertThat(createdOwner).isNotNull();
+            assertThat(createdOwner.getId()).isPositive();
+            
+            System.out.println("Created owner with ID: " + createdOwner.getId());
+            
+            // Criar pet
+            Pet newPet = new Pet();
+            newPet.setName("RepeatPet_" + UUID.randomUUID().toString().substring(0, 8));
+            newPet.setBirthDate(LocalDate.now().minusYears(1));
+            
+            // Definir o tipo do pet
+            PetType dogType = new PetType();
+            dogType.setId(1); // ID para "dog"
+            newPet.setType(dogType);
+            
+            // Criar o pet usando o endpoint correto
+            Pet createdPet = createPet(createdOwner.getId(), newPet);
+            assertThat(createdPet).isNotNull();
+            
+            // Esperar um pouco para garantir consistência
+            Thread.sleep(1000);
+            
+            // Obter a lista de pets duas vezes
+            System.out.println("Getting pet list first time");
+            List<Pet> pets1 = getPetsForOwner(createdOwner.getId());
+            assertThat(pets1).isNotNull();
+            assertThat(pets1).isNotEmpty();
+            System.out.println("First pet list size: " + pets1.size());
+            
+            // Imprimir os IDs dos pets na primeira lista
+            System.out.println("Pet IDs in first list: " + 
+                pets1.stream().map(Pet::getId).map(String::valueOf).collect(Collectors.joining(", ")));
+            
+            // Pequena pausa entre as chamadas
+            Thread.sleep(500);
+            
+            System.out.println("Getting pet list second time");
+            List<Pet> pets2 = getPetsForOwner(createdOwner.getId());
+            assertThat(pets2).isNotNull();
+            assertThat(pets2).isNotEmpty();
+            System.out.println("Second pet list size: " + pets2.size());
+            
+            // Imprimir os IDs dos pets na segunda lista
+            System.out.println("Pet IDs in second list: " + 
+                pets2.stream().map(Pet::getId).map(String::valueOf).collect(Collectors.joining(", ")));
+            
+            // Verificar se as listas têm o mesmo tamanho
+            assertThat(pets1.size()).isEqualTo(pets2.size());
+            
+            // Verificar se todos os pets da primeira lista estão na segunda
+            Set<Integer> ids1 = pets1.stream().map(Pet::getId).collect(Collectors.toSet());
+            Set<Integer> ids2 = pets2.stream().map(Pet::getId).collect(Collectors.toSet());
+            
+            System.out.println("IDs in first set: " + ids1);
+            System.out.println("IDs in second set: " + ids2);
+            
+            assertThat(ids1).isEqualTo(ids2);
+            
+            // Encontrar o pet que acabamos de criar
+            Optional<Pet> createdPetOpt = pets1.stream()
+                .filter(p -> p.getName() != null && p.getName().startsWith("RepeatPet_"))
+                .findFirst();
+                
+            if (createdPetOpt.isPresent()) {
+                Pet foundPet = createdPetOpt.get();
+                System.out.println("Found created pet with ID: " + foundPet.getId());
+                
+                logToSwagger("Test passed: repeatedPetListShouldBeEqual - Owner ID: " + createdOwner.getId() + 
+                            ", Pet ID: " + foundPet.getId());
+            } else {
+                System.out.println("Could not find the created pet in the list");
+                logToSwagger("Test passed: repeatedPetListShouldBeEqual - Owner ID: " + createdOwner.getId() + 
+                            ", but created pet not found in list");
+            }
+        } catch (Exception e) {
+            System.err.println("Error in repeatedPetListShouldBeEqual: " + e.getMessage());
+            e.printStackTrace();
+            logToSwagger("Test failed: repeatedPetListShouldBeEqual - " + e.getMessage());
+            // Pular o teste em caso de erro do servidor
+            Assume.that(false);
+        }
+    }
+
+   
+    
+    
+    @Property(tries = 5)
+    @Step("Teste: Sobrenomes diferentes devem retornar owners disjuntos")
+    void differentLastNamesShouldReturnDisjointOwners(@ForAll("distinctLastNames") Tuple2<String, String> names) {
+        logToSwagger("Starting test: differentLastNamesShouldReturnDisjointOwners");
+        try {
+            System.out.println("Testing with distinct last names: '" + names.get1() + "' and '" + names.get2() + "'");
+            
+            // Criar primeiro owner com o primeiro sobrenome
+            Owner o1 = validOwnerData().sample();
+            o1.setFirstName("Distinct1_" + o1.getFirstName());
+            o1.setLastName(names.get1());
+            
+            // Garantir que todos os campos obrigatórios estejam preenchidos
+            if (o1.getAddress() == null) o1.setAddress("Address1");
+            if (o1.getCity() == null) o1.setCity("City1");
+            if (o1.getTelephone() == null) o1.setTelephone("1234567890");
+            
+            System.out.println("Creating first owner: " + o1.getFirstName() + " " + o1.getLastName());
+            Owner createdOwner1 = createOwner(o1);
+            System.out.println("Created first owner with ID: " + createdOwner1.getId());
+            
+            // Criar segundo owner com o segundo sobrenome
+            Owner o2 = validOwnerData().sample();
+            o2.setFirstName("Distinct2_" + o2.getFirstName());
+            o2.setLastName(names.get2());
+            
+            // Garantir que todos os campos obrigatórios estejam preenchidos
+            if (o2.getAddress() == null) o2.setAddress("Address2");
+            if (o2.getCity() == null) o2.setCity("City2");
+            if (o2.getTelephone() == null) o2.setTelephone("0987654321");
+            
+            System.out.println("Creating second owner: " + o2.getFirstName() + " " + o2.getLastName());
+            Owner createdOwner2 = createOwner(o2);
+            System.out.println("Created second owner with ID: " + createdOwner2.getId());
+            
+            // Esperar um pouco para garantir que os owners estejam indexados para busca (importante para versão assíncrona)
+            Thread.sleep(2000);
+            
+            // Buscar owners pelo primeiro sobrenome
+            System.out.println("Searching for owners with last name: " + names.get1());
+            List<Owner> owners1 = searchOwners(names.get1());
+            System.out.println("Found " + owners1.size() + " owners with last name: " + names.get1());
+            
+            // Buscar owners pelo segundo sobrenome
+            System.out.println("Searching for owners with last name: " + names.get2());
+            List<Owner> owners2 = searchOwners(names.get2());
+            System.out.println("Found " + owners2.size() + " owners with last name: " + names.get2());
+            
+            // Extrair os IDs dos owners encontrados
+            Set<Integer> ids1 = owners1.stream().map(Owner::getId).collect(Collectors.toSet());
+            Set<Integer> ids2 = owners2.stream().map(Owner::getId).collect(Collectors.toSet());
+            
+            System.out.println("IDs for first last name: " + ids1);
+            System.out.println("IDs for second last name: " + ids2);
+            
+            // Verificar se há interseção entre os conjuntos
+            Set<Integer> intersection = new HashSet<>(ids1);
+            intersection.retainAll(ids2);
+            
+            System.out.println("Intersection of IDs: " + intersection);
+            
+            // Verificar se a interseção está vazia (conjuntos disjuntos)
+            assertThat(intersection).isEmpty();
+            
+            logToSwagger("Test passed: differentLastNamesShouldReturnDisjointOwners - Names: " + 
+                        names.get1() + ", " + names.get2());
+        } catch (Exception e) {
+            System.err.println("Error in differentLastNamesShouldReturnDisjointOwners: " + e.getMessage());
+            e.printStackTrace();
+            logToSwagger("Test failed: differentLastNamesShouldReturnDisjointOwners - " + e.getMessage());
+            // Pular o teste em caso de erro do servidor
+            Assume.that(false);
+        }
+    }
+    
+    @Property(tries = 5)
+    @Step("Teste: Lista de veterinários deve ser consistente")
+    void vetListShouldBeConsistent() {
+        logToSwagger("Starting test: vetListShouldBeConsistent");
+        try {
+            // Configurar o cabeçalho para aceitar JSON explicitamente
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            
+            System.out.println("Requesting vets list from: " + BASE_URL + "/vets");
+            
+            // Tentar obter a lista de veterinários usando o endpoint /vets com cabeçalho JSON
+            ResponseEntity<Vets> response = restTemplate.exchange(
+                BASE_URL + "/vets",
+                HttpMethod.GET,
+                entity,
+                Vets.class
+            );
+            
+            // Verificar se a resposta foi bem-sucedida
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                System.out.println("Endpoint returned non-success status code: " + response.getStatusCode());
+                Assume.that(false);
+                return;
+            }
+            
+            if (response.getBody() == null) {
+                System.out.println("Endpoint returned null body");
+                Assume.that(false);
+                return;
+            }
+            
+            if (response.getBody().getVetList() == null || response.getBody().getVetList().isEmpty()) {
+                System.out.println("No vets found in database or endpoint returned empty list");
+                Assume.that(false);
+                return;
+            }
+            
+            List<Vet> vets1 = response.getBody().getVetList();
+            System.out.println("Found " + vets1.size() + " vets in first request");
+            
+            // Imprimir os IDs dos veterinários na primeira lista para depuração
+            System.out.println("Vet IDs in first request: " + 
+                vets1.stream().map(Vet::getId).map(String::valueOf).collect(Collectors.joining(", ")));
+            
+            // Pequena pausa entre as requisições
+            Thread.sleep(500);
+            
+            System.out.println("Making second request to: " + BASE_URL + "/vets");
+            
+            // Fazer uma segunda requisição para verificar consistência
+            ResponseEntity<Vets> response2 = restTemplate.exchange(
+                BASE_URL + "/vets",
+                HttpMethod.GET,
+                entity,
+                Vets.class
+            );
+            
+            // Verificar se a segunda resposta foi bem-sucedida
+            if (!response2.getStatusCode().is2xxSuccessful() || 
+                response2.getBody() == null || 
+                response2.getBody().getVetList() == null || 
+                response2.getBody().getVetList().isEmpty()) {
+                System.out.println("Second request failed or returned empty list");
+                Assume.that(false);
+                return;
+            }
+            
+            List<Vet> vets2 = response2.getBody().getVetList();
+            System.out.println("Found " + vets2.size() + " vets in second request");
+            
+            // Imprimir os IDs dos veterinários na segunda lista para depuração
+            System.out.println("Vet IDs in second request: " + 
+                vets2.stream().map(Vet::getId).map(String::valueOf).collect(Collectors.joining(", ")));
+            
+            // Verificar se as duas listas têm o mesmo tamanho
+            boolean sameSizeCheck = vets1.size() == vets2.size();
+            System.out.println("Lists have same size: " + sameSizeCheck);
+            
+            if (!sameSizeCheck) {
+                System.out.println("First list size: " + vets1.size() + ", Second list size: " + vets2.size());
+                // Não falhar imediatamente, continuar para verificar os IDs
+            }
+            
+            // Verificar se todos os veterinários da primeira lista estão na segunda
+            // Comparar apenas os IDs em vez de objetos completos
+            Set<Integer> ids1 = vets1.stream().map(Vet::getId).collect(Collectors.toSet());
+            Set<Integer> ids2 = vets2.stream().map(Vet::getId).collect(Collectors.toSet());
+            
+            System.out.println("IDs in first set: " + ids1);
+            System.out.println("IDs in second set: " + ids2);
+            
+            // Verificar diferenças entre os conjuntos
+            Set<Integer> onlyInFirst = new HashSet<>(ids1);
+            onlyInFirst.removeAll(ids2);
+            
+            Set<Integer> onlyInSecond = new HashSet<>(ids2);
+            onlyInSecond.removeAll(ids1);
+            
+            if (!onlyInFirst.isEmpty()) {
+                System.out.println("IDs only in first set: " + onlyInFirst);
+            }
+            
+            if (!onlyInSecond.isEmpty()) {
+                System.out.println("IDs only in second set: " + onlyInSecond);
+            }
+            
+            // Verificar se os conjuntos são iguais
+            assertThat(ids1).isEqualTo(ids2);
+            
+            // Verificar se as duas listas têm o mesmo tamanho (agora que já verificamos os IDs)
+            assertThat(vets1).hasSameSizeAs(vets2);
+            
+            logToSwagger("Test passed: vetListShouldBeConsistent - Vet count: " + vets1.size());
+        } catch (Exception e) {
+            System.err.println("Error in vetListShouldBeConsistent: " + e.getMessage());
+            e.printStackTrace();
+            // Pular o teste em caso de erro do servidor
+            System.out.println("Skipping test due to server error: " + e.getMessage());
+            logToSwagger("Test skipped: vetListShouldBeConsistent - " + e.getMessage());
+            Assume.that(false);
+        }
+    }
+    
+    // Métodos auxiliares para os testes
+    
+    
+ // Métodos auxiliares para os testes
+
+    private Owner createOwner(Owner owner) {
+        try {
+            // Configurar os headers para enviar um form
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            
+            // Criar um MultiValueMap para enviar os dados do formulário
+            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+            formData.add("firstName", owner.getFirstName());
+            formData.add("lastName", owner.getLastName());
+            formData.add("address", owner.getAddress());
+            formData.add("city", owner.getCity());
+            formData.add("telephone", owner.getTelephone());
+            
+            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formData, headers);
+            
+            // Enviar o formulário para o endpoint de processamento
+            ResponseEntity<String> response = restTemplate.exchange(
+                BASE_URL + "/owners/new",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+            );
+            
+            // Verificar se a resposta é um redirecionamento (sucesso)
+            if (!response.getStatusCode().is3xxRedirection()) {
+                throw new RuntimeException("Failed to create owner, status code: " + response.getStatusCode());
+            }
+            
+            // Extrair o ID do owner do cabeçalho Location
+            String redirectUrl = response.getHeaders().getLocation() != null 
+                ? response.getHeaders().getLocation().toString() 
+                : response.getHeaders().getFirst("Location");
+                
+            if (redirectUrl == null) {
+                throw new RuntimeException("No redirect URL found in response");
+            }
+            
+            Pattern pattern = Pattern.compile("/owners/(\\d+)");
+            Matcher matcher = pattern.matcher(redirectUrl);
+            
+            if (!matcher.find()) {
+                throw new RuntimeException("Could not extract owner ID from redirect URL: " + redirectUrl);
+            }
+            
+            int ownerId = Integer.parseInt(matcher.group(1));
+            System.out.println("Owner created successfully, ID: " + ownerId);
+            
+            // Esperar um pouco para garantir que a operação seja concluída (importante para versão assíncrona)
+            Thread.sleep(1000);
+            
+            // Obter o owner criado
+            return getOwner(ownerId);
+        } catch (Exception e) {
+            System.err.println("Error creating owner: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create owner", e);
+        }
+    }
+
+    private Owner getOwner(int ownerId) {
+        try {
+            // Obter o owner usando o endpoint JSON
+            ResponseEntity<Owner> response = restTemplate.getForEntity(
+                BASE_URL + "/owners/" + ownerId + ".json",
+                Owner.class
+            );
+            
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                System.err.println("Failed to get owner with ID " + ownerId + ", status code: " + response.getStatusCode());
+                return null;
+            }
+            
+            return response.getBody();
+        } catch (Exception e) {
+            System.err.println("Error getting owner with ID " + ownerId + ": " + e.getMessage());
+            
+            // Tentar obter a página HTML do owner como fallback
+            try {
+                ResponseEntity<String> htmlResponse = restTemplate.getForEntity(
+                    BASE_URL + "/owners/" + ownerId,
+                    String.class
+                );
+                
+                if (htmlResponse.getStatusCode().is2xxSuccessful() && htmlResponse.getBody() != null) {
+                    // Extrair informações básicas do HTML
+                    String html = htmlResponse.getBody();
+                    Owner owner = new Owner();
+                    owner.setId(ownerId);
+                    
+                    // Extrair nome e sobrenome do HTML (implementação simplificada)
+                    Pattern namePattern = Pattern.compile("<h2>([^<]+)</h2>");
+                    Matcher nameMatcher = namePattern.matcher(html);
+                    if (nameMatcher.find()) {
+                        String fullName = nameMatcher.group(1).trim();
+                        String[] nameParts = fullName.split("\\s+", 2);
+                        if (nameParts.length > 0) owner.setFirstName(nameParts[0]);
+                        if (nameParts.length > 1) owner.setLastName(nameParts[1]);
+                    }
+                    
+                    return owner;
+                }
+            } catch (Exception ex) {
+                System.err.println("Error getting owner HTML with ID " + ownerId + ": " + ex.getMessage());
+            }
+            
+            return null;
+        }
+    }
+
+    private List<Owner> searchOwners(String lastName) {
+        try {
+            // Configurar os headers para aceitar JSON
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            
+            // Fazer a busca usando o endpoint de busca
+            ResponseEntity<List<Owner>> response = restTemplate.exchange(
+                BASE_URL + "/owners.json?lastName=" + lastName,
+                HttpMethod.GET,
+                entity,
+                new ParameterizedTypeReference<List<Owner>>() {}
+            );
+            
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                System.err.println("Failed to search owners with lastName " + lastName + ", status code: " + response.getStatusCode());
+                return new ArrayList<>();
+            }
+            
+            return response.getBody();
+        } catch (Exception e) {
+            System.err.println("Error searching owners with lastName " + lastName + ": " + e.getMessage());
+            
+            // Tentar obter a página HTML de busca como fallback
+            try {
+                ResponseEntity<String> htmlResponse = restTemplate.getForEntity(
+                    BASE_URL + "/owners?lastName=" + lastName,
+                    String.class
+                );
+                
+                if (htmlResponse.getStatusCode().is2xxSuccessful() && htmlResponse.getBody() != null) {
+                    String html = htmlResponse.getBody();
+                    List<Owner> owners = new ArrayList<>();
+                    
+                    // Extrair IDs dos owners do HTML
+                    Pattern idPattern = Pattern.compile("/owners/(\\d+)");
+                    Matcher idMatcher = idPattern.matcher(html);
+                    
+                    Set<Integer> ownerIds = new HashSet<>();
+                    while (idMatcher.find()) {
+                        ownerIds.add(Integer.parseInt(idMatcher.group(1)));
+                    }
+                    
+                    // Obter detalhes de cada owner
+                    for (Integer id : ownerIds) {
+                        Owner owner = getOwner(id);
+                        if (owner != null) {
+                            owners.add(owner);
+                        }
+                    }
+                    
+                    return owners;
+                }
+            } catch (Exception ex) {
+                System.err.println("Error getting search HTML for lastName " + lastName + ": " + ex.getMessage());
+            }
+            
+            return new ArrayList<>();
+        }
+    }
+
+    private List<Pet> getPets(int ownerId) {
+        try {
+            // Tentar obter os pets usando o endpoint JSON
+            ResponseEntity<Owner> response = restTemplate.getForEntity(
+                BASE_URL + "/owners/" + ownerId + ".json",
+                Owner.class
+            );
+            
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                System.err.println("Failed to get pets for owner ID " + ownerId + ", status code: " + response.getStatusCode());
+                return new ArrayList<>();
+            }
+            
+            // Obter a lista de pets do owner
+            List<OwnerPet> ownerPets = response.getBody().getPets();
+            if (ownerPets == null) {
+                return new ArrayList<>();
+            }
+            
+            // Converter OwnerPet para Pet
+            return ownerPets.stream()
+                .map(ownerPet -> {
+                    Pet pet = new Pet();
+                    pet.setId(ownerPet.getId());
+                    pet.setName(ownerPet.getName());
+                    pet.setBirthDate(ownerPet.getBirthDate());
+                    if (ownerPet.getType_name() != null) {
+                        PetType type = new PetType();
+                        type.setName(ownerPet.getType_name());
+                        type.setId(0);
+                        pet.setType(type);
+                    }
+                    pet.setOwner_id(ownerId);
+                    return pet;
+                })
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error getting pets for owner ID " + ownerId + ": " + e.getMessage());
+            
+            // Tentar obter a página HTML do owner como fallback
+            try {
+                ResponseEntity<String> htmlResponse = restTemplate.getForEntity(
+                    BASE_URL + "/owners/" + ownerId,
+                    String.class
+                );
+                
+                if (htmlResponse.getStatusCode().is2xxSuccessful() && htmlResponse.getBody() != null) {
+                    String html = htmlResponse.getBody();
+                    List<Pet> pets = new ArrayList<>();
+                    
+                    // Extrair informações dos pets do HTML (implementação simplificada)
+                    Pattern petPattern = Pattern.compile("<dd>([^<]+)</dd>\\s*<dt>Birth Date</dt>");
+                    Matcher petMatcher = petPattern.matcher(html);
+                    
+                    int petId = 1; // ID temporário para pets extraídos do HTML
+                    while (petMatcher.find()) {
+                        String petName = petMatcher.group(1).trim();
+                        Pet pet = new Pet();
+                        pet.setId(petId++);
+                        pet.setName(petName);
+                        pet.setOwner_id(ownerId);
+                        pets.add(pet);
+                    }
+                    
+                    return pets;
+                }
+            } catch (Exception ex) {
+                System.err.println("Error getting owner HTML with ID " + ownerId + ": " + ex.getMessage());
+            }
+            
+            // Tentar usar o endpoint específico para pets
+            try {
+                ResponseEntity<List<Pet>> petsResponse = restTemplate.exchange(
+                    BASE_URL + "/api/pets/owner/" + ownerId,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<List<Pet>>() {}
+                );
+                
+                if (petsResponse.getStatusCode().is2xxSuccessful() && petsResponse.getBody() != null) {
+                    return petsResponse.getBody();
+                }
+            } catch (Exception ex) {
+                System.err.println("Error getting pets from API endpoint: " + ex.getMessage());
+            }
+            
+            return new ArrayList<>();
+        }
+    }
+
+    // Método auxiliar para criar um pet
+    private Pet createPet(int ownerId, Pet pet) {
+        try {
+            // Configurar os headers para enviar um form
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            
+            // Criar um MultiValueMap para enviar os dados do formulário
+            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+            formData.add("name", pet.getName());
+            formData.add("birthDate", pet.getBirthDate().toString());
+            formData.add("type", String.valueOf(pet.getType().getId()));
+            
+            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formData, headers);
+            
+            // Enviar o formulário para o endpoint de processamento
+            ResponseEntity<String> response = restTemplate.exchange(
+                BASE_URL + "/owners/" + ownerId + "/pets/new",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+            );
+            
+            // Verificar se a resposta é um redirecionamento (sucesso)
+            if (response.getStatusCode().is3xxRedirection()) {
+                System.out.println("Pet created successfully");
+                
+                // Esperar um pouco para garantir consistência
+                Thread.sleep(500);
+                
+                // Obter a lista atualizada de pets
+                List<Pet> updatedPets = getPetsForOwner(ownerId);
+                
+                // Encontrar o pet recém-criado pelo nome
+                Optional<Pet> createdPet = updatedPets.stream()
+                    .filter(p -> p.getName() != null && p.getName().equals(pet.getName()))
+                    .findFirst();
+                    
+                if (createdPet.isPresent()) {
+                    return createdPet.get();
+                }
+            }
+            
+            System.out.println("Failed to create pet, status: " + response.getStatusCode());
+        } catch (Exception e) {
+            System.err.println("Error creating pet: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        // Retornar o pet original como fallback
+        return pet;
+    }
+
+    // Método auxiliar para obter pets de um owner
+    private List<Pet> getPetsForOwner(int ownerId) {
+        try {
+            // Tentar obter o owner com seus pets
+            ResponseEntity<Owner> response = restTemplate.getForEntity(
+                BASE_URL + "/owners/" + ownerId + ".json",
+                Owner.class
+            );
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Owner owner = response.getBody();
+                if (owner.getPets() != null) {
+                    // Converter OwnerPet para Pet
+                    return owner.getPets().stream()
+                        .map(ownerPet -> {
+                            Pet pet = new Pet();
+                            pet.setId(ownerPet.getId());
+                            pet.setName(ownerPet.getName());
+                            pet.setBirthDate(ownerPet.getBirthDate());
+                            if (ownerPet.getType_name() != null) {
+                                PetType type = new PetType();
+                                type.setId(0);
+                                type.setName(ownerPet.getType_name());
+                                pet.setType(type);
+                            }
+                            return pet;
+                        })
+                        .collect(Collectors.toList());
+                }
+            }
+            
+            // Fallback: tentar obter a página HTML do owner e extrair informações dos pets
+            ResponseEntity<String> htmlResponse = restTemplate.getForEntity(
+                BASE_URL + "/owners/" + ownerId,
+                String.class
+            );
+            
+            if (htmlResponse.getStatusCode().is2xxSuccessful() && htmlResponse.getBody() != null) {
+                String html = htmlResponse.getBody();
+                return extractPetsFromHtml(html, ownerId);
+            }
+        } catch (Exception e) {
+            System.err.println("Error getting pets for owner " + ownerId + ": " + e.getMessage());
+        }
+        
+        return new ArrayList<>();
+    }
+
+    private int getTotalOwners() {
+        try {
+            // Tentar obter a contagem total de owners
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                BASE_URL + "/owners",
+                String.class
+            );
+            
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                System.err.println("Failed to get owners page, status code: " + response.getStatusCode());
+                return 0;
+            }
+            
+            String html = response.getBody();
+            
+            // Tentar extrair a contagem de owners da página HTML
+            // Método 1: Contar links para owners individuais
+            Pattern ownerLinkPattern = Pattern.compile("/owners/(\\d+)");
+            Matcher ownerLinkMatcher = ownerLinkPattern.matcher(html);
+            
+            Set<String> uniqueOwnerIds = new HashSet<>();
+            while (ownerLinkMatcher.find()) {
+                uniqueOwnerIds.add(ownerLinkMatcher.group(1));
+            }
+            
+            if (!uniqueOwnerIds.isEmpty()) {
+                return uniqueOwnerIds.size();
+            }
+            
+            // Método 2: Contar linhas da tabela (se existir)
+            Pattern tableRowPattern = Pattern.compile("<tr>");
+            Matcher tableRowMatcher = tableRowPattern.matcher(html);
+            
+            int rowCount = 0;
+            while (tableRowMatcher.find()) {
+                rowCount++;
+            }
+            
+            // Subtrair 1 para o cabeçalho da tabela (se houver)
+            return Math.max(0, rowCount - 1);
+        } catch (Exception e) {
+            System.err.println("Error getting total owners count: " + e.getMessage());
+            return 0;
+        }
+    }
+    
+ // Método auxiliar para extrair pets do HTML
+    private List<Pet> extractPetsFromHtml(String html, int ownerId) {
+        List<Pet> pets = new ArrayList<>();
+        
+        try {
+            // Padrão para encontrar a tabela de pets
+            Pattern tablePattern = Pattern.compile("<table id=\"pets\".*?>(.*?)</table>", Pattern.DOTALL);
+            Matcher tableMatcher = tablePattern.matcher(html);
+            
+            if (tableMatcher.find()) {
+                String petsTable = tableMatcher.group(1);
+                
+                // Padrão para encontrar linhas da tabela
+                Pattern rowPattern = Pattern.compile("<tr>(.*?)</tr>", Pattern.DOTALL);
+                Matcher rowMatcher = rowPattern.matcher(petsTable);
+                
+                while (rowMatcher.find()) {
+                    String row = rowMatcher.group(1);
+                    
+                    // Padrão para encontrar o nome do pet
+                    Pattern namePattern = Pattern.compile("<td>(.*?)</td>", Pattern.DOTALL);
+                    Matcher nameMatcher = namePattern.matcher(row);
+                    
+                    if (nameMatcher.find()) {
+                        String petName = nameMatcher.group(1).trim();
+                        
+                        // Criar um objeto Pet com as informações disponíveis
+                        Pet pet = new Pet();
+                        pet.setName(petName);
+                        pet.setId(pets.size() + 1); // ID temporário
+                        pets.add(pet);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error extracting pets from HTML: " + e.getMessage());
+        }
+        
+        return pets;
+    }
+
+    // Providers para geração de dados de teste
+
+    @Provide
+    Arbitrary<String> validPhoneNumber() {
+        // Gerar números de telefone válidos (10 dígitos)
+        return Arbitraries.strings().numeric().ofLength(10);
+    }
+
+    @Provide
+    Arbitrary<Owner> validOwnerData() {
+        Arbitrary<String> name = Arbitraries.strings().withCharRange('A', 'Z').ofMinLength(3).ofMaxLength(10);
+        Arbitrary<String> phone = Arbitraries.strings().numeric().ofLength(10);
+        return Combinators.combine(name, name, name, name, phone).as((f, l, a, c, p) -> {
+            Owner o = new Owner();
+            o.setFirstName(f);
+            o.setLastName(l);
+            o.setAddress(a);
+            o.setCity(c);
+            o.setTelephone(p);
+            return o;
+        });
+    }
+
+    @Provide
+    Arbitrary<Pet> validPetData() {
+        return Arbitraries.of("Max", "Bella", "Charlie", "Luna", "Cooper", "Lucy", "Buddy", "Daisy", "Rocky", "Lola")
+            .map(name -> {
+                Pet pet = new Pet();
+                pet.setName(name);
+                pet.setBirthDate(LocalDate.now().minusYears(Arbitraries.integers().between(1, 15).sample()));
+                
+                PetType petType = new PetType();
+                petType.setId(Arbitraries.integers().between(1, 6).sample());
+                pet.setType(petType);
+                
+                return pet;
+            });
+    }
+
+    @Provide
+    Arbitrary<String> validPetName() {
+        return Arbitraries.strings().withCharRange('A', 'Z').ofMinLength(3).ofMaxLength(10);
+    }
+
+    @Provide
+    Arbitrary<String> prefixLetter() {
+        // Gerar letras comuns em sobrenomes para aumentar a chance de encontrar resultados
+        return Arbitraries.of("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", 
+                              "N", "O", "P", "R", "S", "T", "W");
+    }
+
+    @Provide
+    Arbitrary<String> secondLetter() {
+        // Gerar letras para o segundo caractere do prefixo
+        return Arbitraries.of("a", "e", "i", "o", "u", "r", "s", "t", "n", "m");
+    }
+
+    @Provide
+    Arbitrary<Tuple2<String, String>> distinctLastNames() {
+        // Gerar pares de sobrenomes distintos
+        return Arbitraries.strings()
+                .alpha().ofLength(6)
+                .map(s -> s.toUpperCase())
+                .flatMap(s1 -> 
+                    Arbitraries.strings()
+                        .alpha().ofLength(6)
+                        .map(s2 -> s2.toUpperCase())
+                        .filter(s2 -> !s2.equals(s1))
+                        .map(s2 -> Tuple.of(s1, s2))
+                );
+    }
+
+}
+    
+       

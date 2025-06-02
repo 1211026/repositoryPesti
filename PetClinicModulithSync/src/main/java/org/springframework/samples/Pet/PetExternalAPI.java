@@ -13,4 +13,6 @@ public interface PetExternalAPI {
     Optional<Pet> getPetByName(String name, boolean isNew);
 
     void save(Pet pet);
+
+	Pet findById(int petId);
 }

@@ -34,6 +34,11 @@ public class OwnerController {
 
 	@Autowired
 	private final OwnerExternalAPI ownerExternalAPI;
+	
+	public OwnerController(OwnerExternalAPI ownerExternalAPI) {
+		this.ownerExternalAPI = ownerExternalAPI;
+	}
+	
 
 	@InitBinder
 	public void setAllowedFields(WebDataBinder dataBinder) {

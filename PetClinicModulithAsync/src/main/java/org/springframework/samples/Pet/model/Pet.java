@@ -72,4 +72,36 @@ public class Pet {
 		return this.getName();
 	}
 
+	public String getName() {
+		// TODO Auto-generated method stub
+		return this.name;
+	}
+
+	public LocalDate getBirthDate() {
+		// TODO Auto-generated method stub
+		return this.birthDate;
+	}
+	
+	public  PetType getType() {
+		// TODO Auto-generated method stub
+		return this.type;
+	}
+	
+	public Integer getOwner_id() {
+		// TODO Auto-generated method stub
+		return this.owner_id;
+	}
+	
+	public Set<Pet.Visit> getVisits() {
+		// TODO Auto-generated method stub
+		return this.visits;
+	}
+
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+	
+	
+
 }

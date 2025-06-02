@@ -71,4 +71,37 @@ public class OwnerPet {
 	public String toString() {
 		return this.getName();
 	}
+
+	public String getName() {
+		// TODO Auto-generated method stub
+		return this.name;
+	}
+	
+	public Integer getId() {
+		return this.id;
+	}
+	
+	public LocalDate getBirthDate() {
+		return this.birthDate;
+	}
+	
+	public Integer getOwner_id() {
+		return this.owner_id;
+	}
+	
+	public String getType_name() {
+		return this.type_name;
+	}
+	
+	public Set<Visit> getVisits() {
+		return this.visits;
+	}
+
+	
+	
+	
+	
+	
+	
+
 }

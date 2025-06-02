@@ -1,0 +1,170 @@
+package org.springframework.samples.Owner.service;
+
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.samples.Owner.OwnerExternalAPI;
+import org.springframework.samples.Owner.OwnerPublicAPI;
+import org.springframework.samples.Owner.model.Owner;
+import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Owner.model.OwnerPet.Visit;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+public class OwnerService implements OwnerExternalAPI, OwnerPublicAPI {
+
+    private final OwnerRepository repository;
+    private final OwnerPetRepository petRepository ;
+    
+    @Autowired
+    public OwnerService(OwnerRepository repository, OwnerPetRepository petRepository) {
+		this.repository = repository;
+		this.petRepository = petRepository;
+	}
+
+    @Override
+    @Transactional(readOnly = true)
+    public Owner findById(Integer id) {
+        Owner owner = repository.findById(id);
+        if (owner != null) {
+            // Buscar os pets do owner
+            List<OwnerPet> pets = petRepository.findPetByOwnerId(id);
+            if (pets != null && !pets.isEmpty()) {
+                System.out.println("Encontrados " + pets.size() + " pets para o owner ID: " + id);
+                for (OwnerPet pet : pets) {
+                    // Buscar as visitas para cada pet
+                    Set<OwnerPet.Visit> visits = petRepository.findVisitByPetId(pet.getId());
+                    // Adicionar o pet com suas visitas ao owner
+                    owner.addPet(pet, visits);
+                    System.out.println("Adicionado pet: " + pet.getName() + " (ID: " + pet.getId() + ") com " + 
+                                      (visits != null ? visits.size() : 0) + " visitas");
+                }
+            } else {
+                System.out.println("Nenhum pet encontrado para o owner ID: " + id);
+            }
+        }
+        return owner;
+    }
+    
+    @Override
+    public Integer save(Owner owner) {
+        if (owner.getId() != null) {
+            Owner existingOwner = repository.findById(owner.getId());
+            existingOwner.setFirstName(owner.getFirstName());
+            existingOwner.setLastName(owner.getLastName());
+            existingOwner.setAddress(owner.getAddress());
+            existingOwner.setCity(owner.getCity());
+            existingOwner.setTelephone(owner.getTelephone());
+            
+            // Garantir que os pets sejam preservados
+            if (owner.getPets() != null && !owner.getPets().isEmpty()) {
+                if (existingOwner.getPets() == null) {
+                    existingOwner.setPets(new ArrayList<>());
+                }
+                
+                // Adicionar novos pets que não existem no owner existente
+                for (OwnerPet pet : owner.getPets()) {
+                    boolean petExists = false;
+                    for (OwnerPet existingPet : existingOwner.getPets()) {
+                        if ((existingPet.getId() != null && existingPet.getId().equals(pet.getId())) ||
+                            (existingPet.getName() != null && existingPet.getName().equals(pet.getName()))) {
+                            petExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!petExists) {
+                        pet.setOwner_id(owner.getId());
+                        existingOwner.getPets().add(pet);
+                        System.out.println("Adicionado pet ao owner existente: " + pet.getName());
+                    }
+                }
+            }
+            
+            repository.save(existingOwner);
+            return existingOwner.getId();
+        }
+        
+        Owner newOwner = createOwner(owner);
+        return newOwner.getId();
+    }
+
+    @Override
+    public void savePet(Integer id, String name, String type, Integer owner_id, LocalDate birthdate) {
+        try {
+            // Criar novo pet
+            OwnerPet newPet = new OwnerPet(id, name, birthdate, owner_id, type);
+            
+            // Salvar o pet no repositório
+            petRepository.save(newPet);
+            System.out.println("Pet salvo na tabela owner_pets: " + name + " (ID: " + id + ")");
+            
+            // Atualizar a lista de pets do owner
+            Owner owner = repository.findById(owner_id);
+            if (owner != null) {
+                // Buscar todos os pets do owner diretamente do repositório
+                List<OwnerPet> pets = petRepository.findPetByOwnerId(owner_id);
+                owner.setPets(pets);
+                repository.save(owner);
+                System.out.println("Owner atualizado com a lista de pets do repositório");
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao salvar pet: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    private Owner createOwner(Owner owner) {
+        repository.save(owner);
+        return owner;
+    }
+
+    @Override
+    public Page<Owner> findByLastName(String lastname, Pageable pageable) {
+        Page<Owner> pageOwner = repository.findByLastName(lastname,pageable);
+        List<Owner> ownerList = new ArrayList<>(pageOwner.getContent());
+        for(Owner owner: ownerList) {
+            List<OwnerPet> pets = petRepository.findPetByOwnerId(owner.getId());
+            owner.setPets(pets);
+        }
+        return new PageImpl<>(ownerList, pageable, pageOwner.getTotalElements());
+    }
+
+    @Override
+    public List<OwnerPet> findPetByOwner(Integer owner_id) {
+        return petRepository.findPetByOwnerId(owner_id);
+    }
+
+    @Override
+    public Optional<Owner> findByName(String firstName, String lastName) {
+        return repository.findByName(firstName,lastName);
+    }
+
+    
+
+    @Override
+    public void saveVisit(Integer id, LocalDate date, String description, Integer pet_id) {
+        petRepository.save(new OwnerPet.Visit(id,description,date,pet_id));
+    }
+    
+    @Override
+    public List<OwnerPet.Visit> findVisitByPetId(Integer pet_id) {
+		return (List<Visit>) petRepository.findVisitByPetId(pet_id);
+	}
+
+	@Override
+	public Owner findById(int ownerId) {
+		return repository.findById(ownerId);
+		
+	}
+}

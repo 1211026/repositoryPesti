@@ -1,0 +1,5 @@
+package org.springframework.samples.Pet.service;
+
+public class PetRestService {
+
+}

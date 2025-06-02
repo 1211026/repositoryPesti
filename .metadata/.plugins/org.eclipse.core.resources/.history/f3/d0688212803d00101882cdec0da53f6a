@@ -1,0 +1,150 @@
+package org.springframework.samples.Pet.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.samples.Owner.OwnerPublicAPI;
+import org.springframework.samples.Owner.model.Owner;
+import org.springframework.samples.Pet.model.Pet;
+import org.springframework.samples.Pet.model.PetType;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+/**
+ * Serviço para operações de API relacionadas a Pets
+ */
+@Service
+@RequiredArgsConstructor
+public class PetRestService {
+
+    private final PetRepository petRepository;
+    private final PetTypeRepository petTypeRepository;
+    private final OwnerPublicAPI ownerPublicAPI;
+    
+    @Autowired
+    public PetApiService(PetRepository petRepository, PetTypeRepository petTypeRepository, OwnerPublicAPI ownerPublicAPI) {
+        this.petRepository = petRepository;
+        this.petTypeRepository = petTypeRepository;
+        this.ownerPublicAPI = ownerPublicAPI;
+    }
+    
+    /**
+     * Cria um novo pet para um owner específico
+     * @param pet O pet a ser criado
+     * @param ownerId O ID do owner
+     * @return O pet criado com ID atribuído
+     */
+    public Pet createPet(Pet pet, Integer ownerId) {
+        // Configurar o pet com o ID do owner
+        pet.setOwner_id(ownerId);
+        
+        // Validar e ajustar a data de nascimento se necessário
+        if (pet.getBirthDate() == null) {
+            pet.setBirthDate(LocalDate.now().minusYears(1));
+        } else if (pet.getBirthDate() instanceof LocalDate && ((LocalDate) pet.getBirthDate()).isAfter(LocalDate.now())) {
+            pet.setBirthDate(LocalDate.now().minusMonths(1));
+        }
+        
+        // Validar e ajustar o tipo do pet se necessário
+        if (pet.getType() == null) {
+            // Buscar um tipo padrão (ex: "dog")
+            Optional<PetType> defaultType = petTypeRepository.findPetTypes().stream()
+                .filter(type -> "dog".equalsIgnoreCase(type.getName()))
+                .findFirst();
+            
+            if (defaultType.isPresent()) {
+                pet.setType(defaultType.get());
+            } else if (!petTypeRepository.findPetTypes().isEmpty()) {
+                // Usar o primeiro tipo disponível
+                pet.setType(petTypeRepository.findPetTypes().iterator().next());
+            } else {
+                // Criar um tipo padrão se não houver nenhum
+                PetType dogType = new PetType();
+                dogType.setId(1);
+                dogType.setName("dog");
+                pet.setType(dogType);
+            }
+        }
+        
+        // Salvar o pet
+        boolean isNew = (pet.getId() == null);
+        petRepository.save(pet, isNew);
+        
+        // Notificar o módulo Owner sobre o novo pet
+        notifyOwnerModule(pet);
+        
+        return pet;
+    }
+    
+    /**
+     * Atualiza um pet existente
+     * @param petId O ID do pet a ser atualizado
+     * @param pet Os novos dados do pet
+     * @return O pet atualizado
+     */
+    public Pet updatePet(Integer petId, Pet pet) {
+        // Buscar o pet existente
+        Pet existingPet = petRepository.findById(petId);
+        if (existingPet == null) {
+            throw new IllegalArgumentException("Pet não encontrado com ID: " + petId);
+        }
+        
+        // Atualizar os campos do pet
+        if (pet.getName() != null) {
+            existingPet.setName(pet.getName());
+        }
+        
+        if (pet.getBirthDate() != null) {
+            existingPet.setBirthDate(pet.getBirthDate());
+        }
+        
+        if (pet.getType() != null) {
+            existingPet.setType(pet.getType());
+        }
+        
+        // Salvar o pet atualizado
+        petRepository.save(existingPet, false);
+        
+        // Notificar o módulo Owner sobre a atualização
+        notifyOwnerModule(existingPet);
+        
+        return existingPet;
+    }
+    
+    /**
+     * Notifica o módulo Owner sobre mudanças em um pet
+     * @param pet O pet que foi criado ou atualizado
+     */
+    private void notifyOwnerModule(Pet pet) {
+        // Extrair os valores com os tipos corretos
+        Integer petId = pet.getId();
+        String petName = pet.getName();
+        Integer ownerId = pet.getOwner_id();
+        LocalDate birthDate = null;
+        
+        // Converter birthDate para LocalDate se necessário
+        if (pet.getBirthDate() instanceof LocalDate) {
+            birthDate = (LocalDate) pet.getBirthDate();
+        } else if (pet.getBirthDate() != null) {
+            try {
+                birthDate = LocalDate.parse(pet.getBirthDate().toString());
+            } catch (Exception e) {
+                birthDate = LocalDate.now();
+            }
+        }
+        
+        // Extrair o nome do tipo
+        String typeName = "";
+        if (pet.getType() instanceof PetType) {
+            typeName = ((PetType) pet.getType()).getName();
+        } else if (pet.getType() instanceof String) {
+            typeName = (String) pet.getType();
+        } else if (pet.getType() != null) {
+            typeName = pet.getType().toString();
+        }
+        
+        // Chamar o método com os tipos corretos
+        ownerPublicAPI.savePet(petId, petName, typeName, ownerId, birthDate);
+    }
+}

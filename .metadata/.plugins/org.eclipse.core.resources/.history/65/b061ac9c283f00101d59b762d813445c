@@ -1,0 +1,183 @@
+package org.springframework.samples.Owner.repository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Owner.service.OwnerPetRepository;
+import org.springframework.stereotype.Repository;
+
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+@Repository
+public class OwnerPetRepositoryImpl implements OwnerPetRepository {
+
+    private final JdbcTemplate jdbcTemplate;
+    
+    @Autowired
+    public OwnerPetRepositoryImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+    
+    @Override
+    public void save(OwnerPet pet) {
+        if (pet.getId() == null) {
+            // Inserir novo pet
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO owner_pets (name, birth_date, owner_id, type_name) VALUES (?, ?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS
+                );
+                ps.setString(1, pet.getName());
+                ps.setDate(2, java.sql.Date.valueOf(pet.getBirthDate()));
+                ps.setInt(3, pet.getOwner_id());
+                ps.setString(4, pet.getType_name());
+                return ps;
+            }, keyHolder);
+            
+            Number key = keyHolder.getKey();
+            if (key != null) {
+                pet.setId(key.intValue());
+                System.out.println("Pet salvo com ID: " + pet.getId());
+            }
+        } else {
+            // Atualizar pet existente
+            jdbcTemplate.update(
+                "UPDATE owner_pets SET name = ?, birth_date = ?, owner_id = ?, type_name = ? WHERE id = ?",
+                pet.getName(), java.sql.Date.valueOf(pet.getBirthDate()), pet.getOwner_id(), pet.getType_name(), pet.getId()
+            );
+            System.out.println("Pet atualizado com ID: " + pet.getId());
+        }
+    }
+    
+    @Override
+    public List<OwnerPet> findPetByOwnerId(Integer ownerId) {
+        return jdbcTemplate.query(
+            "SELECT id, name, birth_date, owner_id, type_name FROM owner_pets WHERE owner_id = ?",
+            (rs, rowNum) -> {
+                OwnerPet pet = new OwnerPet();
+                pet.setId(rs.getInt("id"));
+                pet.setName(rs.getString("name"));
+                pet.setBirthDate(rs.getDate("birth_date").toLocalDate());
+                pet.setOwner_id(rs.getInt("owner_id"));
+                pet.setType_name(rs.getString("type_name"));
+                return pet;
+            },
+            ownerId
+        );
+    }
+    
+    @Override
+    public Optional<OwnerPet> findById(Integer id) {
+        try {
+            OwnerPet pet = jdbcTemplate.queryForObject(
+                "SELECT id, name, birth_date, owner_id, type_name FROM owner_pets WHERE id = ?",
+                (rs, rowNum) -> {
+                    OwnerPet p = new OwnerPet();
+                    p.setId(rs.getInt("id"));
+                    p.setName(rs.getString("name"));
+                    p.setBirthDate(rs.getDate("birth_date").toLocalDate());
+                    p.setOwner_id(rs.getInt("owner_id"));
+                    p.setType_name(rs.getString("type_name"));
+                    return p;
+                },
+                id
+            );
+            return Optional.ofNullable(pet);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+    
+    
+    
+    @Override
+    public Set<OwnerPet.Visit> findVisitByPetId(Integer petId) {
+        List<OwnerPet.Visit> visits = jdbcTemplate.query(
+            "SELECT id, pet_id, visit_date, description FROM owner_visits WHERE pet_id = ?",
+            (rs, rowNum) -> {
+                Integer id = rs.getInt("id");
+                Integer pet_id = rs.getInt("pet_id");
+                java.sql.Date visit_date = rs.getDate("visit_date");
+                String description = rs.getString("description");
+                
+                return new OwnerPet.Visit(
+                    id,
+                    description,
+                    visit_date.toLocalDate(),
+                    pet_id
+                );
+            },
+            petId
+        );
+        
+        return new HashSet<>(visits);
+    }
+    
+    // Método adicional para excluir um pet
+    public void deletePet(Integer petId) {
+        // Primeiro, excluir todas as visitas associadas a este pet
+        jdbcTemplate.update("DELETE FROM owner_visits WHERE pet_id = ?", petId);
+        
+        // Em seguida, excluir o pet
+        jdbcTemplate.update("DELETE FROM owner_pets WHERE id = ?", petId);
+        
+        System.out.println("Pet excluído com ID: " + petId);
+    }
+    
+    // Método adicional para contar pets por owner
+    public int countPetsByOwnerId(Integer ownerId) {
+        Integer count = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM owner_pets WHERE owner_id = ?",
+            Integer.class,
+            ownerId
+        );
+        return count != null ? count : 0;
+    }
+    
+    // Método adicional para buscar todos os pets
+    public List<OwnerPet> findAll() {
+        return jdbcTemplate.query(
+            "SELECT id, name, birth_date, owner_id, type_name FROM owner_pets",
+            (rs, rowNum) -> {
+                OwnerPet pet = new OwnerPet();
+                pet.setId(rs.getInt("id"));
+                pet.setName(rs.getString("name"));
+                pet.setBirthDate(rs.getDate("birth_date").toLocalDate());
+                pet.setOwner_id(rs.getInt("owner_id"));
+                pet.setType_name(rs.getString("type_name"));
+                return pet;
+            }
+        );
+    }
+    
+ // Método para salvar uma visita
+    @Modifying
+    @Query(value = "INSERT INTO visits (id, visit_date, description, pet_id) VALUES (:id, :date, :description, :petId)", nativeQuery = true)
+    void saveVisit(@Param("id") Integer id, 
+                   @Param("date") LocalDate date, 
+                   @Param("description") String description, 
+                   @Param("petId") Integer petId) {
+	}
+
+    // Implementação do método default para salvar uma visita
+    public void save(OwnerPet.Visit visit) {
+        if (visit == null) {
+            throw new IllegalArgumentException("Visita não pode ser nula");
+        }
+        
+        saveVisit(visit.id(), visit.getVisit_date(), visit.getDescription(), visit.getPet_id());
+        System.out.println("Visita salva via SQL: ID=" + visit.id() + ", Pet ID=" + visit.getPet_id());
+    }
+}

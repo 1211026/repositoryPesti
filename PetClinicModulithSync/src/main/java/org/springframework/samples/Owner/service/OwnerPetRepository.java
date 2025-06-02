@@ -17,4 +17,14 @@ public interface OwnerPetRepository {
     void save(OwnerPet.Visit visit);
 
     Set<OwnerPet.Visit> findVisitByPetId(Integer id);
+    
+ // Adicione este método para corresponder ao que está sendo chamado em OwnerManagement
+    void save(boolean isNew, OwnerPet pet);
+    
+    // Métodos adicionais
+    void deletePet(Integer petId);
+    
+    int countPetsByOwnerId(Integer ownerId);
+    
+    List<OwnerPet> findAll();
 }

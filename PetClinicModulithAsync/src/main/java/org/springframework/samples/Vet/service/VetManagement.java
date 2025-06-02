@@ -1,6 +1,8 @@
 package org.springframework.samples.Vet.service;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.Vet.VetExternalAPI;
@@ -15,6 +17,11 @@ import java.util.Collection;
 public class VetManagement implements VetExternalAPI {
 
 	private final VetRepository vetRepository;
+	
+	@Autowired
+	public VetManagement(VetRepositoryImpl vetRepository) {
+		this.vetRepository = vetRepository;
+	}
 
 	@Override
 	public Page<Vet> findAll(Pageable pageable) {

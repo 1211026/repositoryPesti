@@ -99,7 +99,7 @@ class OwnerControllerTests {
 		given(this.owners.findByLastName(eq("Franklin"), any(Pageable.class)))
 			.willReturn(new PageImpl<Owner>(Lists.newArrayList(george)));
 
-		given(this.owners.findAll()).willReturn(Lists.newArrayList(george));
+		given(this.owners.findAll(any(Pageable.class))).willReturn(new PageImpl<Owner>(Lists.newArrayList(george)));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(george);
 		Visit visit = new Visit();

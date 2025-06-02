@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<section name="java.lang.Class">
+		<item key="replaceBarOpen" value="false"/>
+		<list key="findhistory">
+			<item value="add"/>
+			<item value="addVisit"/>
+			<item value="vetSubsetIsContainedInFullSet"/>
+			<item value="vetListShould"/>
+			<item value="editPetN"/>
+			<item value="repeated"/>
+			<item value="addPetIncr"/>
+			<item value="different"/>
+			<item value="searchbWiht"/>
+			<item value="editOwner"/>
+			<item value="getSameOwner"/>
+			<item value="getPets"/>
+			<item value="editPet"/>
+			<item value="editPetName"/>
+			<item value="editPetNa"/>
+		</list>
+	</section>
+</section>

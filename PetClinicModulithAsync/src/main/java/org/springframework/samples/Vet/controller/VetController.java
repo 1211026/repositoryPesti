@@ -4,6 +4,8 @@ package org.springframework.samples.Vet.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,11 @@ import java.util.List;
 public class VetController {
 
 	private final VetExternalAPI vetExternalAPI;
+	
+	@Autowired
+	public VetController(VetExternalAPI vetExternalAPI) {
+		this.vetExternalAPI = vetExternalAPI;
+	}
 
 	@GetMapping("/vets.html")
 	@Operation(summary = "Show Veterinarian List HTML")

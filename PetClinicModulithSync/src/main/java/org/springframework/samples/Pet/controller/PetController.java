@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.samples.Pet.PetExternalAPI;
 import org.springframework.samples.Pet.model.Pet;
 import org.springframework.samples.Pet.model.PetType;
@@ -29,6 +32,11 @@ public class PetController {
     private static final String VIEWS_PETS_CREATE_OR_UPDATE_FORM = "pets/createOrUpdatePetForm";
 
     private final PetExternalAPI petExternalAPI;
+    
+    @Autowired
+    public PetController(@Qualifier("petService") PetExternalAPI petExternalAPI) {
+		this.petExternalAPI = petExternalAPI;
+	}
 
     @ModelAttribute("types")
     public Collection<PetType> populatePetTypes() {
@@ -62,7 +70,7 @@ public class PetController {
                                       RedirectAttributes redirectAttributes) {
 
         LocalDate currentDate = LocalDate.now();
-        if (pet.getBirthDate() == null || pet.getBirthDate().isAfter(currentDate)) {
+        if (pet.getBirthDate() == null || ((LocalDate) pet.getBirthDate()).isAfter(currentDate)) {
             result.rejectValue("birthDate", "typeMismatch.birthDate");
         }
 
@@ -92,7 +100,7 @@ public class PetController {
     public String processUpdateForm(@PathVariable("ownerId") int ownerId,@Valid Pet pet, BindingResult result,ModelMap model,
                                     RedirectAttributes redirectAttributes) {
 
-        if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(LocalDate.now())) {
+        if (pet.getBirthDate() != null && ((LocalDate) pet.getBirthDate()).isAfter(LocalDate.now())) {
             result.rejectValue("birthDate", "typeMismatch.birthDate");
         }
 

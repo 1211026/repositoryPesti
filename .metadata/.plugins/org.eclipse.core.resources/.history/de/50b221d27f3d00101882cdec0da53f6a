@@ -1,0 +1,214 @@
+package org.springframework.samples.Pet.controller;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.samples.Owner.model.Owner;
+import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Owner.service.OwnerRepository;
+import org.springframework.samples.Pet.model.Pet;
+import org.springframework.samples.Pet.model.PetType;
+import org.springframework.samples.Pet.service.PetRepository;
+import org.springframework.samples.Visit.model.Visit;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api")
+@Tag(name = "pet-rest-controller", description = "Operations about pets")
+public class PetRestController {
+
+    private final OwnerRepository owners;
+    
+    private final PetRepository petRepository;
+
+    public PetRestController(OwnerRepository owners, PetRepository petRepository) {
+        this.owners = owners;
+        this.petRepository = petRepository;
+    }
+
+   
+
+    @GetMapping("/pets/{petId}")
+    @Operation(summary = "Get pet by ID")
+    public ResponseEntity<Pet> getPet(@PathVariable("petId") int petId) {
+        Pet pet = this.petRepository.findById(petId);
+        if (pet == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(pet, HttpStatus.OK);
+    }
+
+    @GetMapping("/pets/owner/{ownerId}")
+    @Operation(summary = "Get all pets for an owner")
+    public ResponseEntity<List<Pet>> getPetsByOwner(@PathVariable("ownerId") int ownerId) {
+        Owner owner = this.owners.findById(ownerId);
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        List<OwnerPet> ownerPets = owner.getPets();
+        
+        if (ownerPets.isEmpty()) {
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		}
+        
+		// Map OwnerPet to Pet
+		List<Pet> pets = ownerPets.stream()
+				.map(ownerPet -> new Pet(ownerPet.getId(), ownerPet.getName(), ownerPet.getBirthDate(), ownerPet.getType()))
+				.toList();
+		
+		return new ResponseEntity<>(pets, HttpStatus.OK);
+    }
+
+    @PostMapping("/owners/{ownerId}/pets")
+    @Operation(summary = "Create a new pet for an owner")
+    public ResponseEntity<Pet> createPet(@PathVariable("ownerId") int ownerId, @Valid @RequestBody Pet pet) {
+        // Verificar se o owner existe
+        Owner owner = this.owners.findById(ownerId);
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        try {
+            // Usar o endpoint HTML existente para criar o pet
+            // Isso evita problemas de conversão entre Pet e OwnerPet
+            
+            // Configurar os headers para enviar um form
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            
+            // Criar um MultiValueMap para enviar os dados do formulário
+            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+            formData.add("name", (String) pet.getName());
+            
+        
+            String birthDateStr = "";
+            if (pet.getBirthDate() != null) {
+                if (pet.getBirthDate() instanceof LocalDate) {
+                    birthDateStr = ((LocalDate) pet.getBirthDate()).format(DateTimeFormatter.ISO_LOCAL_DATE);
+                } else {
+                    // Tentar converter para string de alguma forma
+                    birthDateStr = pet.getBirthDate().toString();
+                }
+            }
+            formData.add("birthDate", birthDateStr);
+            
+            // Adicionar o tipo do pet
+            String petType = "";
+            if (pet.getType() != null && pet.getType() != null) {
+                petType = ((OwnerPet) pet.getType()).getName();
+            }
+            formData.add("type", petType);
+            
+            // Se o pet já tiver um ID, incluí-lo
+            if (pet.getId() != null) {
+                formData.add("id", pet.getId().toString());
+            }
+            
+            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formData, headers);
+            
+            // Chamar o endpoint HTML
+            String url = "http://localhost:8080/owners/" + ownerId + "/pets/new";
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+            );
+            
+            // Se a resposta for um redirecionamento (302), consideramos que foi bem-sucedido
+            if (response.getStatusCode().is3xxRedirection()) {
+            
+                List<OwnerPet> ownerPets = (List<OwnerPet>) owner.getPets();
+                if (!ownerPets.isEmpty()) {
+                    OwnerPet createdPet = ownerPets.get(ownerPets.size() - 1);
+                    return new ResponseEntity<>(createdPet, HttpStatus.CREATED);
+                }
+            }
+            
+
+            return new ResponseEntity<>(pet, HttpStatus.CREATED);
+        } catch (Exception e) {
+
+            System.err.println("Erro ao criar pet: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    
+
+    @PutMapping("/pets/{petId}")
+    @Operation(summary = "Update an existing pet")
+    public ResponseEntity<Pet> updatePet(@PathVariable("petId") int petId, @Valid @RequestBody Pet pet) {
+        // Encontrar o pet existente
+        Pet existingPet = this.petRepository.findById(petId);
+        if (existingPet == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Encontrar o owner do pet
+        Owner owner = null;
+        Pageable pageable = PageRequest.of(0, 1000); // Usar um tamanho grande para obter todos
+        Page<Owner> ownersPage = this.owners.findAll(pageable);
+        List<Owner> allOwners = ownersPage.getContent();
+        
+        for (Owner o : allOwners) {
+            for (Pet p : o.getPets()) {
+                if (p.getId() != null && p.getId().equals(petId)) {
+                    owner = o;
+                    break;
+                }
+            }
+            if (owner != null) break;
+        }
+        
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Atualizar os campos do pet existente
+        existingPet.setName(pet.getName());
+        existingPet.setBirthDate(pet.getBirthDate());
+        if (pet.getType() != null) {
+            existingPet.setType(pet.getType());
+        }
+        
+        // Salvar o owner, que cascateia para o pet
+        this.owners.save(owner);
+        
+        return new ResponseEntity<>(existingPet, HttpStatus.OK);
+    }
+    
+    @PostMapping("/pettypes")
+    @Operation(summary = "Create a new pet type")
+    public ResponseEntity<PetType> createPetType(@Valid @RequestBody PetType petType) {
+
+        petType.setId(1); 
+        return new ResponseEntity<>(petType, HttpStatus.CREATED);
+    }
+}

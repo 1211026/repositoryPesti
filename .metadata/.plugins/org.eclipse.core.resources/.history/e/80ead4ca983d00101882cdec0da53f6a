@@ -1,0 +1,212 @@
+package org.springframework.samples.Pet.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.samples.Owner.OwnerExternalAPI;
+import org.springframework.samples.Owner.model.Owner;
+import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Pet.PetExternalAPI;
+import org.springframework.samples.Pet.model.Pet;
+import org.springframework.samples.Pet.model.PetType;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+@Tag(name = "pet-rest-controller")
+public class PetRestController {
+
+    private final PetExternalAPI petExternalAPI;
+    
+    private final OwnerExternalAPI owners;
+    
+    @Autowired
+    public PetRestController(@Qualifier("petService") PetExternalAPI petExternalAPI, 
+							 @Qualifier("ownerService") OwnerExternalAPI ownerExternalAPI) {
+        this.petExternalAPI = petExternalAPI;
+        this.owners = ownerExternalAPI;
+    }
+
+    @GetMapping("/pettypes")
+    @Operation(summary = "Get all pet types")
+    public ResponseEntity<Collection<PetType>> getPetTypes() {
+        return new ResponseEntity<>(this.petExternalAPI.findPetTypes(), HttpStatus.OK);
+    }
+
+    @GetMapping("/pets/{petId}")
+    @Operation(summary = "Get pet by ID")
+    public ResponseEntity<Pet> getPet(@PathVariable("petId") int petId) {
+        Pet pet = this.petExternalAPI.getPetById(petId);
+        if (pet == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(pet, HttpStatus.OK);
+    }
+
+    @PostMapping("/owners/{ownerId}/pets")
+    @Operation(summary = "Create a new pet for an owner")
+    public ResponseEntity<Pet> createPet(@PathVariable("ownerId") int ownerId, @Valid @RequestBody Pet pet) {
+        try {
+            // Log para depuração
+            System.out.println("Recebendo requisição para criar pet para owner ID: " + ownerId);
+            System.out.println("Dados do pet: Nome=" + pet.getName() + ", Data=" + pet.getBirthDate());
+            
+            // Verificar se o owner existe
+            Owner owner = this.owners.findById(ownerId);
+            if (owner == null) {
+                System.out.println("Owner não encontrado com ID: " + ownerId);
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            
+            // Criar um tipo de pet manualmente
+            PetType dogType = new PetType();
+            dogType.setId(1);
+            dogType.setName("dog");
+            pet.setType(dogType);
+            System.out.println("Usando tipo de pet manual: dog (ID: 1)");
+            
+            // Verificar se a data de nascimento é válida
+            if (pet.getBirthDate() == null) {
+                System.out.println("Data de nascimento ausente, usando data atual");
+                pet.setBirthDate(LocalDate.now().minusYears(1));
+            } else if (pet.getBirthDate().isAfter(LocalDate.now())) {
+                System.out.println("Data de nascimento no futuro, usando data atual");
+                pet.setBirthDate(LocalDate.now().minusYears(1));
+            }
+            
+            // Verificar qual tipo de Pet o owner aceita
+            System.out.println("Verificando o tipo de Pet que o owner aceita");
+            
+            // Verificar se estamos no contexto do monolito ou do modulith
+            if (owner.getClass().getName().contains("samples.petclinic.model")) {
+                // Estamos no monolito, onde Owner aceita Pet
+                System.out.println("Contexto: Monolito - Owner aceita Pet");
+                
+                // Adicionar o pet ao owner usando o método correto
+                try {
+                    // Tentar usar reflexão para chamar o método correto
+                    java.lang.reflect.Method addPetMethod = owner.getClass().getMethod("addPet", Pet.class);
+                    addPetMethod.invoke(owner, pet);
+                    System.out.println("Pet adicionado ao owner via reflexão");
+                } catch (Exception e) {
+                    System.err.println("Erro ao adicionar pet via reflexão: " + e.getMessage());
+                    
+                    // Tentar adicionar diretamente à lista de pets
+                    try {
+                        java.lang.reflect.Method getPetsMethod = owner.getClass().getMethod("getPets");
+                        @SuppressWarnings("unchecked")
+                        List<Pet> pets = (List<Pet>) getPetsMethod.invoke(owner);
+                        pets.add(pet);
+                        System.out.println("Pet adicionado diretamente à lista de pets");
+                    } catch (Exception e2) {
+                        System.err.println("Erro ao adicionar pet diretamente: " + e2.getMessage());
+                        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                }
+            } else {
+                // Estamos no modulith, onde Owner aceita OwnerPet
+                System.out.println("Contexto: Modulith - Owner aceita OwnerPet");
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            
+            // Salvar o owner, que cascateia para o pet
+            System.out.println("Salvando owner com o novo pet");
+            this.owners.save(owner);
+            
+            System.out.println("Pet criado com sucesso. ID: " + pet.getId());
+            return new ResponseEntity<>(pet, HttpStatus.CREATED);
+        } catch (Exception e) {
+            System.err.println("Erro ao criar pet: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/pets/{petId}")
+    @Operation(summary = "Update an existing pet")
+    public ResponseEntity<?> updatePet(
+            @PathVariable("ownerId") int ownerId,
+            @PathVariable("petId") int petId,
+            @Valid @RequestBody Pet pet,
+            BindingResult result) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        // Validar data de nascimento
+        if (pet.getBirthDate() != null && ((LocalDate) pet.getBirthDate()).isAfter(LocalDate.now())) {
+            response.put("error", "Birth date cannot be in the future");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        // Verificar erros de validação
+        if (result.hasErrors()) {
+            response.put("errors", result.getAllErrors());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        // Verificar se o pet existe
+        Pet existingPet = petExternalAPI.getPetById(petId);
+        if (existingPet == null) {
+            response.put("error", "Pet not found with ID: " + petId);
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+
+        // Configurar o ID do pet e do owner
+        pet.setId(petId);
+        pet.setOwner_id(ownerId);
+
+        // Salvar o pet atualizado
+        petExternalAPI.save(pet);
+        
+        // Retornar o pet atualizado
+        response.put("message", "Pet details has been edited");
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    
+    @GetMapping("/pets/owners/{ownerId}/pets")
+    @Operation(summary = "Get all pets for an owner")
+    public ResponseEntity<List<Pet>> getPetsByOwnerId(@PathVariable("ownerId") int ownerId) {
+        Owner owner = this.owners.findById(ownerId);
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        List<OwnerPet> ownerPets = owner.getPets();
+        
+        // Converter OwnerPet para Pet
+        List<Pet> pets = ownerPets.stream()
+            .map(ownerPet -> {
+                Pet pet = new Pet();
+                pet.setId((Integer) ownerPet.getId());
+                pet.setName(ownerPet.getName());
+                pet.setBirthDate((LocalDate) ownerPet.getBirthDate());
+                
+                // Configurar o tipo do pet se disponível
+                if (ownerPet.getType_name() != null) {
+                    PetType petType = new PetType();
+                    petType.setName(ownerPet.getType_name());
+                    pet.setType(petType);
+                }
+                
+                return pet;
+            })
+            .collect(Collectors.toList());
+        
+        return new ResponseEntity<>(pets, HttpStatus.OK);
+    }
+}

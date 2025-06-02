@@ -16,4 +16,8 @@ public interface VisitRepository {
 
     Visit findById(Integer id);
 
+	List<Visit> findByPetId(int petId);
+
+	Visit findById(int visitId);
+
 }

@@ -1,0 +1,5 @@
+package org.springframework.samples.Vet.controller;
+
+public class VetRestController {
+
+}

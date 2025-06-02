@@ -1,117 +1,92 @@
+
 package org.springframework.samples.petclinic.api;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.samples.petclinic.model.*;
-import org.springframework.samples.petclinic.repository.OwnerRepository;
-
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.repository.OwnerRepository;
+import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/owners")
+@Tag(name = "owner-rest-controller", description = "Operations about owners")
 public class OwnerRestController {
 
-    private static final Logger logger = LoggerFactory.getLogger(OwnerRestController.class);
-    private final OwnerRepository ownerRepository;
+    private final OwnerRepository owners;
 
-    public OwnerRestController(OwnerRepository ownerRepository) {
-        this.ownerRepository = ownerRepository;
+    public OwnerRestController(OwnerRepository owners) {
+        this.owners = owners;
     }
 
     @GetMapping
-    public ResponseEntity<List<Owner>> getAllOwners(Pageable pageable) {
-        try {
-            List<Owner> owners = ownerRepository.findAll(pageable).getContent();
-
-            // força a inicialização de pets para evitar LazyInitializationException
-            owners.forEach(o -> o.getPets().size());
-
-            return owners.isEmpty()
-                    ? ResponseEntity.noContent().build()
-                    : ResponseEntity.ok(owners);
-        } catch (Exception e) {
-            logger.error("Erro ao buscar Owners", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    @Operation(summary = "Get all owners or find by last name")
+    public ResponseEntity<List<Owner>> getOwners(
+            @RequestParam(required = false) String lastName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        
+        Pageable pageable = PageRequest.of(page, size);
+        
+        if (lastName != null && !lastName.isEmpty()) {
+            Page<Owner> ownersPage = this.owners.findByLastName(lastName, pageable);
+            return new ResponseEntity<>(ownersPage.getContent(), HttpStatus.OK);
+        } else {
+            Page<Owner> ownersPage = this.owners.findAll(pageable);
+            return new ResponseEntity<>(ownersPage.getContent(), HttpStatus.OK);
         }
     }
 
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Owner> getOwnerById(@PathVariable("id") int id) {
-        Owner owner = ownerRepository.findById(id);
-        return (owner != null) ? ResponseEntity.ok(owner) : ResponseEntity.notFound().build();
+    @GetMapping("/{ownerId}")
+    @Operation(summary = "Get owner by ID")
+    public ResponseEntity<Owner> getOwner(@PathVariable("ownerId") int ownerId) {
+        Owner owner = this.owners.findById(ownerId);
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(owner, HttpStatus.OK);
     }
 
     @PostMapping
-    public ResponseEntity<Owner> createOwner(@RequestBody Owner owner) {
-        try {
-            if (owner.getPets() != null) {
-                for (Pet pet : owner.getPets()) {
-                    pet.setOwner(owner);  // ✅ assegura a relação bidirecional
-                }
-            }
+    @Operation(summary = "Create a new owner")
+    public ResponseEntity<Owner> createOwner(@Valid @RequestBody Owner owner) {
+        this.owners.save(owner);
+        return new ResponseEntity<>(owner, HttpStatus.CREATED);
+    }
 
-            ownerRepository.save(owner);
-            return ResponseEntity.status(HttpStatus.CREATED).body(owner);
-        } catch (Exception e) {
-            logger.error("Erro ao criar Owner", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    @PutMapping("/{ownerId}")
+    @Operation(summary = "Update an existing owner")
+    public ResponseEntity<Owner> updateOwner(@PathVariable("ownerId") int ownerId, @Valid @RequestBody Owner owner) {
+        Owner existingOwner = this.owners.findById(ownerId);
+        if (existingOwner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+        
+        owner.setId(ownerId);
+        this.owners.save(owner);
+        return new ResponseEntity<>(owner, HttpStatus.OK);
     }
-
-
-
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Void> updateOwner(@PathVariable("id") int id, @RequestBody Owner updatedOwner) {
-        try {
-            Owner existing = ownerRepository.findById(id);
-            if (existing == null) return ResponseEntity.notFound().build();
-
-            existing.setFirstName(updatedOwner.getFirstName());
-            existing.setLastName(updatedOwner.getLastName());
-            existing.setAddress(updatedOwner.getAddress());
-            existing.setCity(updatedOwner.getCity());
-            existing.setTelephone(updatedOwner.getTelephone());
-
-            existing.getPets().clear();
-            if (updatedOwner.getPets() != null) {
-                for (Pet pet : updatedOwner.getPets()) {
-                    pet.setOwner(existing);   // 🛠 define o dono corretamente
-                    existing.addPet(pet);     // 🛠 método seguro e bidirecional
-                }
-            }
-
-            ownerRepository.save(existing);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            logger.error("Erro ao atualizar Owner com ID: " + id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-
-    @GetMapping("/{ownerId}/pets")
-    public ResponseEntity<List<Pet>> getPetsByOwner(@PathVariable("ownerId") int ownerId) {
-        Owner owner = ownerRepository.findById(ownerId);
-        return (owner == null)
-                ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(owner.getPets().stream().collect(Collectors.toList()));
-    }
-
-    @GetMapping(params = "lastName")
-    public ResponseEntity<List<Owner>> searchOwners(@RequestParam("lastName") String lastName) {
-        return ResponseEntity.ok(ownerRepository.findByLastNameRaw(lastName));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleAllExceptions(Exception e) {
-        logger.error("Erro inesperado no OwnerRestController", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Erro interno: " + e.getMessage());
+    
+    @GetMapping("/findByName")
+    @Operation(summary = "Find owner by first and last name")
+    public ResponseEntity<Owner> findByName(@RequestParam String firstName, @RequestParam String lastName) {
+        Pageable pageable = PageRequest.of(0, 100);
+        Page<Owner> ownersPage = this.owners.findByLastName(lastName, pageable);
+        
+        Optional<Owner> owner = ownersPage.getContent().stream()
+            .filter(o -> o.getFirstName().equals(firstName))
+            .findFirst();
+        
+        return owner.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
+            .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 }

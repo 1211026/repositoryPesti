@@ -2,18 +2,11 @@
 package org.springframework.samples.petclinic.model;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 
@@ -28,17 +21,11 @@ public class Pet extends NamedEntity {
 	@ManyToOne
 	@JoinColumn(name = "type_id")
 	private PetType type;
-	
-	@JsonBackReference
-	@ManyToOne
-	@JoinColumn(name = "owner_id")
-	private Owner owner;
 
-
-	
-	@OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
-	private List<Visit> visits = new ArrayList<>();
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JoinColumn(name = "pet_id")
+	@OrderBy("visit_date ASC")
+	private Set<Visit> visits = new LinkedHashSet<>();
 
 
 	public void setBirthDate(LocalDate birthDate) {
@@ -62,44 +49,8 @@ public class Pet extends NamedEntity {
 	}
 
 	public void addVisit(Visit visit) {
-		this.visits.add(visit);
+		getVisits().add(visit);
 	}
-	
-	public void setOwner(Owner owner) {
-		this.owner = owner;
-	}
-	
-	public Owner getOwner() {
-		return this.owner;
-	}
-	
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-
-		Pet pet = (Pet) o;
-
-		return this.getId() != null && this.getId().equals(pet.getId());
-	}
-
-	@Override
-	public int hashCode() {
-		return getId() != null ? getId().hashCode() : 0;
-	}
-
-	public void setOwnerId(Integer id) {
-		
-		if (this.owner == null) {
-			this.owner = new Owner();
-		}
-		this.owner.setId(id);
-		
-	}
-
-	
-	
-	
 
 
 }

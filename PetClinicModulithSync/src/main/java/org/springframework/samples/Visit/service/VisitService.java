@@ -1,6 +1,8 @@
 package org.springframework.samples.Visit.service;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.Owner.OwnerPublicAPI;
 import org.springframework.samples.Pet.PetPublicAPI;
 import org.springframework.samples.Visit.VisitExternalAPI;
@@ -17,6 +19,13 @@ public class VisitService implements VisitExternalAPI {
     private final VisitRepository visitRepository;
     private final PetPublicAPI petPublicAPI;
     private final OwnerPublicAPI ownerPublicAPI;
+    
+   @Autowired
+    public VisitService(VisitRepository visitRepository, PetPublicAPI petPublicAPI, OwnerPublicAPI ownerPublicAPI) {
+		this.visitRepository = visitRepository;
+		this.petPublicAPI = petPublicAPI;
+		this.ownerPublicAPI = ownerPublicAPI;
+	}
 
     @Override
     public void save(Visit visit) {
@@ -29,6 +38,16 @@ public class VisitService implements VisitExternalAPI {
     public List<Visit> findAll() {
         return visitRepository.findAll();
     }
+    
+    @Override
+    public List<Visit> findByPetId(int petId) {
+		return visitRepository.findByPetId(petId);
+	}
+    
+    @Override
+	public Visit findById(int visitId) {
+		return visitRepository.findById(visitId);
+	}
 
 
 }

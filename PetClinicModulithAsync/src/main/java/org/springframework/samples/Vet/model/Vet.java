@@ -83,4 +83,9 @@ public class Vet implements Serializable {
 		getSpecialtiesInternal().add(specialty);
 	}
 
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+
 }

@@ -3,7 +3,6 @@ package org.springframework.samples.petclinic.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -29,9 +28,7 @@ public interface OwnerRepository extends Repository<Owner, Integer> {
 
 	@Query("SELECT owner FROM Owner owner left join fetch owner.pets WHERE owner.id =:id")
 	@Transactional(readOnly = true)
-	@EntityGraph(attributePaths = "pets")
-	Owner findById(int id);
-
+    Owner findById(@Param("id") Integer id);
 
 
 	void save(Owner owner);
@@ -39,31 +36,9 @@ public interface OwnerRepository extends Repository<Owner, Integer> {
 	@Query("SELECT owner FROM Owner owner")
 	@Transactional(readOnly = true)
 	Page<Owner> findAll(Pageable pageable);
-	
-	@Query("SELECT o FROM Owner o JOIN o.pets p WHERE p.id = :petId")
-	Owner findOwnerByPetId(@Param("petId") Integer petId);
-
-
-
-
 
 	@Query("SELECT pet FROM Pet pet WHERE pet.id =:id")
 	@Transactional(readOnly = true)
 	Pet findPetById(@Param("id") Integer id);
-
-	@Query("SELECT owner FROM Owner owner")
-	@Transactional(readOnly = true)
-	List<Owner> findAllOwners();
-  // Método para obter todos os donos
-
-
-	@Query("SELECT owner FROM Owner owner WHERE owner.lastName LIKE :lastName%")
-	List<Owner> findByLastNameRaw(@Param("lastName") String lastName);
-
-
-
-	
-	
-	
 
 }

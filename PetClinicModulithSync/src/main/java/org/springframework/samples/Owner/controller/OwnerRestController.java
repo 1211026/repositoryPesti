@@ -1,0 +1,98 @@
+
+package org.springframework.samples.Owner.controller;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.samples.Owner.model.Owner;
+import org.springframework.samples.Owner.service.OwnerRepository;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/owners")
+@Tag(name = "owner-rest-controller", description = "Operations about owners")
+public class OwnerRestController {
+
+    private final OwnerRepository owners;
+
+    public OwnerRestController(OwnerRepository owners) {
+        this.owners = owners;
+    }
+
+    @GetMapping
+    @Operation(summary = "Get all owners or find by last name")
+    public ResponseEntity<List<Owner>> getOwners(
+            @RequestParam(required = false) String lastName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        
+        Pageable pageable = PageRequest.of(page, size);
+        
+        if (lastName != null && !lastName.isEmpty()) {
+            Page<Owner> ownersPage = this.owners.findByLastName(lastName, pageable);
+            return new ResponseEntity<>(ownersPage.getContent(), HttpStatus.OK);
+        } else {
+            Page<Owner> ownersPage = this.owners.findAll(pageable);
+            return new ResponseEntity<>(ownersPage.getContent(), HttpStatus.OK);
+        }
+    }
+
+    @GetMapping("/{ownerId}")
+    @Operation(summary = "Get owner by ID")
+    public ResponseEntity<Owner> getOwner(@PathVariable("ownerId") int ownerId) {
+        Owner owner = this.owners.findById(ownerId);
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(owner, HttpStatus.OK);
+    }
+
+    @PostMapping
+    @Operation(summary = "Create a new owner")
+    public ResponseEntity<Owner> createOwner(@Valid @RequestBody Owner owner) {
+        this.owners.save(owner);
+        return new ResponseEntity<>(owner, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{ownerId}")
+    @Operation(summary = "Update an existing owner")
+    public ResponseEntity<Owner> updateOwner(@PathVariable("ownerId") int ownerId, @Valid @RequestBody Owner owner) {
+        Owner existingOwner = this.owners.findById(ownerId);
+        if (existingOwner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        owner.setId(ownerId);
+        this.owners.save(owner);
+        return new ResponseEntity<>(owner, HttpStatus.OK);
+    }
+    
+    @GetMapping("/findByName")
+    @Operation(summary = "Find owner by first and last name")
+    public ResponseEntity<Owner> findByName(@RequestParam String firstName, @RequestParam String lastName) {
+        Pageable pageable = PageRequest.of(0, 100);
+        Page<Owner> ownersPage = this.owners.findByLastName(lastName, pageable);
+        
+        Optional<Owner> owner = ownersPage.getContent().stream()
+            .filter(o -> o.getFirstName().equals(firstName))
+            .findFirst();
+        
+        return (ResponseEntity<Owner>) owner.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
+            .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+}

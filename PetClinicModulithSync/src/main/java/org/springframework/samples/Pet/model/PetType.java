@@ -26,11 +26,20 @@ public class PetType implements Serializable {
 		return this.getName();
 	}
 
+	public String getName() {
+		// TODO Auto-generated method stub
+		return this.name;
+	}
+
 	public void setId(Integer id) {
 		this.id = id;
 	}
 
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	public Integer getId() {
+		return this.id;
 	}
 }

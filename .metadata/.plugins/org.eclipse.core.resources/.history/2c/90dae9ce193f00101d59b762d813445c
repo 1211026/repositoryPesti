@@ -1,0 +1,59 @@
+@Repository
+public class OwnerPetRepositoryImpl implements OwnerPetRepository {
+
+    private final JdbcTemplate jdbcTemplate;
+    
+    @Autowired
+    public OwnerPetRepositoryImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+    
+    @Override
+    public void save(OwnerPet pet) {
+        if (pet.getId() == null) {
+            // Inserir novo pet
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO owner_pets (name, birth_date, owner_id, type_name) VALUES (?, ?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS
+                );
+                ps.setString(1, pet.getName());
+                ps.setDate(2, java.sql.Date.valueOf(pet.getBirthDate()));
+                ps.setInt(3, pet.getOwner_id());
+                ps.setString(4, pet.getType_name());
+                return ps;
+            }, keyHolder);
+            
+            Number key = keyHolder.getKey();
+            if (key != null) {
+                pet.setId(key.intValue());
+            }
+        } else {
+            // Atualizar pet existente
+            jdbcTemplate.update(
+                "UPDATE owner_pets SET name = ?, birth_date = ?, owner_id = ?, type_name = ? WHERE id = ?",
+                pet.getName(), java.sql.Date.valueOf(pet.getBirthDate()), pet.getOwner_id(), pet.getType_name(), pet.getId()
+            );
+        }
+    }
+    
+    @Override
+    public List<OwnerPet> findPetByOwnerId(Integer ownerId) {
+        return jdbcTemplate.query(
+            "SELECT id, name, birth_date, owner_id, type_name FROM owner_pets WHERE owner_id = ?",
+            (rs, rowNum) -> {
+                OwnerPet pet = new OwnerPet();
+                pet.setId(rs.getInt("id"));
+                pet.setName(rs.getString("name"));
+                pet.setBirthDate(rs.getDate("birth_date").toLocalDate());
+                pet.setOwner_id(rs.getInt("owner_id"));
+                pet.setType_name(rs.getString("type_name"));
+                return pet;
+            },
+            ownerId
+        );
+    }
+    
+    // Outros métodos...
+}

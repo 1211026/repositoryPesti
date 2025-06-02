@@ -17,23 +17,23 @@ public class PetClinicApplicationSync {
     }
 
 
-    @Bean
+    @Bean(name = "syncOwnerJdbcClient")
     JdbcClient ownerJdbcClient(@Qualifier("ownerDataSource") DataSource dataSource){
         return JdbcClient.create(dataSource);
     }
 
 
-    @Bean
+    @Bean(name = "syncPetJdbcClient")
     JdbcClient petJdbcClient(@Qualifier("petDataSource") DataSource dataSource){
         return JdbcClient.create(dataSource);
     }
 
-    @Bean
+    @Bean(name = "syncVetJdbcClient")
     JdbcClient vetJdbcClient(@Qualifier("vetDataSource") DataSource dataSource){
         return JdbcClient.create(dataSource);
     }
 
-    @Bean
+    @Bean(name = "syncVisitJdbcClient")
     JdbcClient visitJdbcClient(@Qualifier("visitDataSource") DataSource dataSource){
         return JdbcClient.create(dataSource);
     }

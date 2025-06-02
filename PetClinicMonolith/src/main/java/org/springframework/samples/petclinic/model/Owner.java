@@ -2,18 +2,13 @@
 package org.springframework.samples.petclinic.model;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.util.Assert;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 
 @Entity
@@ -33,13 +28,10 @@ public class Owner extends Person {
 	@Digits(fraction = 0, integer = 10)
 	private String telephone;
 
-	@OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JoinColumn(name = "owner_id")
+	@OrderBy("name")
 	private List<Pet> pets = new ArrayList<>();
-
-
-
-	
 
 	public String getAddress() {
 		return this.address;
@@ -70,16 +62,9 @@ public class Owner extends Person {
 	}
 
 	public void addPet(Pet pet) {
-	    if (pet != null) {
-	        pet.setOwner(this); // Garante integridade bidirecional
-	        this.pets.add(pet);
-	    }
-	}
-
-
-	public void removePet(Pet pet) {
-		pets.remove(pet);
-		pet.setOwner(null);  // limpa a referência do dono no pet
+		if (pet.isNew()) {
+			getPets().add(pet);
+		}
 	}
 
 	/**
@@ -154,19 +139,5 @@ public class Owner extends Person {
 
 		pet.addVisit(visit);
 	}
-
-	@Override
-	public boolean equals(Object o) {
-	    if (this == o) return true;
-	    if (o == null || getClass() != o.getClass()) return false;
-	    Owner owner = (Owner) o;
-	    return Objects.equals(getId(), owner.getId());
-	}
-
-	@Override
-	public int hashCode() {
-	    return Objects.hash(getId());
-	}
-
 
 }

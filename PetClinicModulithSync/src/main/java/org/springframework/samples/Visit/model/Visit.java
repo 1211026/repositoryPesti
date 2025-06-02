@@ -55,6 +55,46 @@ public class Visit {
         return this.id == null;
     }
 
+	public String getDescription() {
+		// TODO Auto-generated method stub
+		return this.description;
+	}
+	
+	public LocalDate getDate() {
+		// TODO Auto-generated method stub
+		return this.date;
+	}
+	
+	public Integer getId() {
+		// TODO Auto-generated method stub
+		return this.id;
+	}
+	
+	public Integer getPet_id() {
+		// TODO Auto-generated method stub
+		return this.pet_id;
+	}
+	
+	public void setId(String id) {
+		try {
+			this.id = Integer.parseInt(id);
+		} catch (NumberFormatException e) {
+			this.id = null;
+		}
+	}
+
+	public Integer getPetId() {
+		// TODO Auto-generated method stub
+		return this.pet_id;
+	}
+
+	public void setPetId(int petId) {
+		this.pet_id = petId;
+		
+	}
+	
+	
+
 
 
 }
