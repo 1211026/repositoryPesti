@@ -12,20 +12,21 @@
     <artifactId>PetClinicModulithSync</artifactId>
 
     <properties>
-        <maven.compiler.source>18</maven.compiler.source>
-        <maven.compiler.target>18</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-        </dependency>
+    <groupId>net.jqwik</groupId>
+    <artifactId>jqwik</artifactId>
+    <version>1.8.0</version> <!-- ou versão mais recente -->
+    <scope>test</scope>
+</dependency>
         <dependency>
-  <groupId>net.jqwik</groupId>
-  <artifactId>jqwik</artifactId>
-  <version>1.8.4</version>
-  <scope>test</scope>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.22</version> <scope>provided</scope>
 </dependency>
         <dependency>
         	<groupId>org.springframework.samples</groupId>
@@ -33,17 +34,52 @@
         	<version>3.2.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-    <groupId>io.qameta.allure</groupId>
-    <artifactId>allure-junit5</artifactId>
-    <version>2.24.0</version>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.jsoup</groupId>
-    <artifactId>jsoup</artifactId>
-    <version>1.16.1</version>
-    <scope>test</scope>
-</dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-junit5</artifactId>
+            <version>2.24.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.16.1</version>
+            <scope>test</scope>
+        </dependency>
+        
+        
+        
+        <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+        <exclusions>
+            <exclusion>
+                <groupId>org.junit.vintage</groupId>
+                <artifactId>junit-vintage-engine</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+        
+         <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -51,9 +87,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>16</source>
-                    <target>16</target>
-                </configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    </configuration>
             </plugin>
         </plugins>
     </build>

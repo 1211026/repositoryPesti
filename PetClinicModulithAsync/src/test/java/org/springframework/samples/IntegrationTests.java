@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,7 @@ import org.springframework.samples.Owner.model.OwnerPet;
 import org.springframework.samples.Owner.service.OwnerRepository;
 import org.springframework.samples.Pet.model.Pet;
 import org.springframework.samples.Pet.model.PetType;
+import org.springframework.samples.Pet.service.PetManagement;
 import org.springframework.samples.Pet.service.PetRepository;
 import org.springframework.samples.Pet.service.PetTypeRepository;
 import org.springframework.samples.Vet.model.Specialty;
@@ -24,6 +26,7 @@ import org.springframework.samples.Vet.model.Vet;
 import org.springframework.samples.Vet.service.VetRepository;
 import org.springframework.samples.Visit.model.Visit;
 import org.springframework.samples.Visit.service.VisitRepository;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.SerializationUtils;
 
@@ -32,6 +35,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -481,6 +487,6 @@ public class IntegrationTests {
         assertThat(visit.getPet_id()).isEqualTo(7);
     }
 
-
+    
 
 }

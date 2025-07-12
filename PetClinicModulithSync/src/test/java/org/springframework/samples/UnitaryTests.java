@@ -3,7 +3,8 @@ package org.springframework.samples;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
 import org.springframework.samples.Owner.model.Owner;
 import org.springframework.samples.Owner.model.OwnerPet;
 import org.springframework.samples.Pet.model.Pet;
@@ -15,6 +16,7 @@ import org.springframework.samples.Visit.model.Visit;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -140,15 +142,18 @@ public class UnitaryTests {
         OwnerPet pet2 = new OwnerPet();
         pet2.setName("Max");
 
-        List<OwnerPet> pets = new ArrayList<>();
+        Set<OwnerPet> pets = new LinkedHashSet<>();
         pets.add(pet1);
         pets.add(pet2);
 
         Owner owner = new Owner(10, "John", "Doe", "123 Main St", "Springfield", "123456789@", pets);
 
-        assertEquals(2, owner.getPets().size());
-        assertEquals("Buddy", owner.getPets().get(0).getName());
-        assertEquals("Max", owner.getPets().get(1).getName());
+        // Converte o Set para uma List para aceder por índice
+        List<OwnerPet> petsList = new ArrayList<>(owner.getPets());
+
+        assertEquals(2, petsList.size());
+        assertEquals("Buddy", petsList.get(0).getName());
+        assertEquals("Max", petsList.get(1).getName());
     }
 
     @Test

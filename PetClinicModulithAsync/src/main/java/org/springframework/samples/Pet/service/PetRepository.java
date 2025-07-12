@@ -16,4 +16,6 @@ public interface PetRepository {
 
     void save(Pet.Visit petVisit);
 
+	Pet findById(int petId);
+
 }

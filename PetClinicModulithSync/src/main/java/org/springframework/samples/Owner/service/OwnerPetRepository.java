@@ -1,6 +1,7 @@
 package org.springframework.samples.Owner.service;
 
 import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Visit.model.Visit;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,9 +15,9 @@ public interface OwnerPetRepository {
 
     void save(OwnerPet pet);
 
-    void save(OwnerPet.Visit visit);
+    void save(Visit visit);
 
-    Set<OwnerPet.Visit> findVisitByPetId(Integer id);
+    Set<org.springframework.samples.Owner.model.OwnerPet.Visit> findVisitByPetId(Integer id);
     
  // Adicione este método para corresponder ao que está sendo chamado em OwnerManagement
     void save(boolean isNew, OwnerPet pet);
@@ -27,4 +28,8 @@ public interface OwnerPetRepository {
     int countPetsByOwnerId(Integer ownerId);
     
     List<OwnerPet> findAll();
+
+	void save(org.springframework.samples.Owner.model.OwnerPet.Visit visit);
+    
+  
 }

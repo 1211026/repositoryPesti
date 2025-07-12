@@ -9,6 +9,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.samples.Pet.model.Pet;
+
 @Getter
 public class Owner implements Serializable {
 	private Integer id;
@@ -102,6 +104,8 @@ public class Owner implements Serializable {
 	public List<OwnerPet> getPets() {
 		return this.pets;
 	}
+
+	
 	
 	
 	

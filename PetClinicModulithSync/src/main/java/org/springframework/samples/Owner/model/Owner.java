@@ -1,186 +1,316 @@
 package org.springframework.samples.Owner.model;
 
 
-import jakarta.persistence.*;
+
+import jakarta.persistence.*; // Importe tudo de jakarta.persistence
+
 import jakarta.validation.constraints.Digits;
+
 import jakarta.validation.constraints.NotBlank;
+
 import lombok.Getter;
 
+
+
 import java.io.Serializable;
+
 import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.HashSet; // Mudar para HashSet para coleções @OneToMany
+
 import java.util.List;
-import java.util.Set;
 
-import org.springframework.samples.Owner.model.OwnerPet.Visit;
-import org.springframework.samples.Pet.model.Pet;
-import org.springframework.samples.Pet.model.PetType;
+import java.util.Set; // Usar Set<OwnerPet> para a coleção
 
 
-@Getter
+
+// IMPORTANTE: Adicionar estas anotações
+
+@Entity // Indica que esta classe é uma entidade JPA
+
+@Table(name = "owners") // Mapeia para a tabela 'owners' no DB
+
 public class Owner implements Serializable {
 
-    private Integer id;
 
-    @NotBlank
-    private String firstName;
 
-    @NotBlank
-    private String lastName;
+@Id // Marca 'id' como chave primária
 
-    @NotBlank
-    private String address;
+@GeneratedValue(strategy = GenerationType.IDENTITY) // Estratégia para geração automática de ID
 
-    @NotBlank
-    private String city;
+private Integer id;
 
-    @NotBlank
-    @Digits(fraction = 0, integer = 10)
-    private String telephone;
 
-    private List<OwnerPet> pets = new ArrayList<>();
 
-    public Owner(Integer id, String firstName, String lastName, String address, String city, String telephone, List<OwnerPet> pets) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.address = address;
-        this.city = city;
-        this.telephone = telephone;
-        this.pets = pets;
-    }
+@NotBlank
 
-    public Owner() {
+@Column(name = "first_name") // Mapeia para a coluna first_name
 
-    }
+private String firstName;
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
 
-    public void setCity(String city) {
-        this.city = city;
-    }
+@NotBlank
 
-    public void setTelephone(String telephone) {
-        this.telephone = telephone;
-    }
+@Column(name = "last_name") // Mapeia para a coluna last_name
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+private String lastName;
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
 
-    public void setPets(List<OwnerPet> pets) {
-        this.pets = pets;
-    }
 
-	public String getFirstName() {
-		// TODO Auto-generated method stub
-		return this.firstName;
-	}
-	
-	public String getLastName() {
-		// TODO Auto-generated method stub
-		return this.lastName;
-	}
-	
-	public String getAddress() {
-		// TODO Auto-generated method stub
-		return this.address;
-	}
-	
-	public String getCity() {
-		// TODO Auto-generated method stub
-		return this.city;
-	}
-	
-	public String getTelephone() {
-		// TODO Auto-generated method stub
-		return this.telephone;
-	}
-	
-	public List<OwnerPet> getPets() {
-		// TODO Auto-generated method stub
-		return this.pets;
-	}
-	
-	public Integer getId() {
-		// TODO Auto-generated method stub
-		return this.id;
-	}
-	
-	
-	public void addPet(OwnerPet pet) {
-	    if (this.pets == null) {
-	        this.pets = new ArrayList<>();
-	    }
-	    
-	    // Verificar se o pet já existe na lista
-	    boolean petExists = false;
-	    for (OwnerPet existingPet : this.pets) {
-	        if (existingPet.getId() != null && existingPet.getId().equals(pet.getId())) {
-	            petExists = true;
-	            break;
-	        }
-	        
-	        // Se o ID for nulo, verificar pelo nome
-	        if (existingPet.getName() != null && existingPet.getName().equals(pet.getName())) {
-	            petExists = true;
-	            break;
-	        }
-	    }
-	    
-	    // Adicionar o pet apenas se ele não existir na lista
-	    if (!petExists) {
-	        pet.setOwner_id(this.id);
-	        this.pets.add(pet);
-	        System.out.println("Pet adicionado ao owner: " + pet.getName() + " (Owner ID: " + this.id + ")");
-	    } else {
-	        System.out.println("Pet já existe na lista do owner: " + pet.getName());
-	    }
-	}
+@NotBlank
 
-	public void addPet(OwnerPet pet, Set<OwnerPet.Visit> visits) {
-	    if (pet == null) {
-	        throw new IllegalArgumentException("Pet não pode ser nulo");
-	    }
-	    
-	    // Criar um novo Pet a partir do OwnerPet
-	    Pet newPet = new Pet();
-	    newPet.setId(pet.getId());
-	    newPet.setName(pet.getName());
-	    newPet.setBirthDate(pet.getBirthDate());
-	    
-	    // Criar um tipo para o pet
-	    PetType type = new PetType();
-	    type.setName(pet.getType_name());
-	    newPet.setType(type);
-	    
-	    // Adicionar visitas ao pet
-	    if (visits != null && !visits.isEmpty()) {
-	        for (Visit visit : visits) {
-	            Visit newVisit = new Visit();
-	            newVisit.setId(visit.id());
-	            newVisit.setDate(visit.getVisit_date());
-	            newVisit.setDescription(visit.getDescription());
-	            newPet.addVisit(newVisit);
-	        }
-	    }
-	    
-	    // Adicionar o pet à lista de pets do owner
-	    if (this.pets == null) {
-	        this.pets = new ArrayList<>();
-	    }
-	    this.pets.add(pet);
-	    
-	    System.out.println("Pet adicionado ao owner: " + newPet.getName() + " (ID: " + newPet.getId() + ")");
-	}
-	}
+@Column(name = "address")
 
+private String address;
+
+
+
+@NotBlank
+
+@Column(name = "city")
+
+private String city;
+
+
+
+@NotBlank
+
+@Digits(fraction = 0, integer = 10)
+
+@Column(name = "telephone")
+
+private String telephone;
+
+
+
+@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+
+@JoinColumn(name = "owner_id") // owner_id na tabela owner_pets
+
+private Set<OwnerPet> pets = new HashSet<>(); // Corrigido para HashSet
+
+
+
+public Owner() {
+
+// Construtor padrão necessário para JPA
+
+}
+
+
+// Construtor
+
+public Owner(Integer id, String firstName, String lastName, String address, String city, String telephone, Set<OwnerPet> pets) { // Parâmetro agora é Set
+
+this.id = id;
+
+this.firstName = firstName;
+
+this.lastName = lastName;
+
+this.address = address;
+
+this.city = city;
+
+this.telephone = telephone;
+
+this.pets = pets;
+
+}
+
+// Métodos get/set para os atributos
+
+public Integer getId() {
+
+return id;
+
+}
+
+
+
+public Integer setId(Integer id) {
+
+return this.id = id;
+
+}
+
+
+public String getFirstName() {
+
+return firstName;
+
+
+}
+
+
+public void setFirstName(String firstName) {
+
+this.firstName = firstName;
+
+}
+
+
+public String getLastName() {
+
+
+return lastName;
+
+}
+
+
+public void setLastName(String lastName) {
+
+
+this.lastName = lastName;
+
+}
+
+
+
+public String getAddress() {
+
+
+return address;
+
+}
+
+
+public void setAddress(String address) {
+
+
+this.address = address;
+
+}
+
+
+public String getCity() {
+
+
+return city;
+
+}
+
+
+public void setCity(String city) {
+
+
+this.city = city;
+
+}
+
+
+public String getTelephone() {
+
+
+return telephone;
+
+}
+
+
+public void setTelephone(String telephone) {
+
+
+this.telephone = telephone;
+
+}
+
+
+
+
+
+
+// Mantenha os seus métodos get/set e addPet
+
+public Set<OwnerPet> getPets() { // Mude o retorno para Set
+
+if (pets == null) {
+
+pets = new HashSet<>();
+
+}
+
+return pets;
+
+}
+
+
+public void setPets(Set<OwnerPet> pets) { // Parâmetro é Set
+
+this.pets = pets;
+
+}
+
+
+
+public void addPet(OwnerPet pet) {
+
+if (pet == null) {
+
+throw new IllegalArgumentException("Pet não pode ser nulo");
+
+}
+
+if (this.pets == null) {
+
+this.pets = new HashSet<>();
+
+}
+
+boolean exists = this.pets.stream().anyMatch(existing ->
+
+(existing.getId() != null && existing.getId().equals(pet.getId())) ||
+
+(existing.getName() != null && existing.getName().equalsIgnoreCase(pet.getName()))
+
+);
+
+if (!exists) {
+
+pet.setOwner_id(this.getId()); // Garanta que o owner_id do pet é setado
+
+this.pets.add(pet);
+
+System.out.println("Pet adicionado: " + pet.getName());
+
+} else {
+
+System.out.println("Pet já existe: " + pet.getName());
+
+}
+
+}
+
+
+
+
+
+// O outro método addPet também deverá ser ajustado para Set
+
+public void addPet(OwnerPet pet, Set<OwnerPet.Visit> visits) {
+
+if (pet == null) {
+
+throw new IllegalArgumentException("Pet não pode ser nulo");
+
+}
+
+if (visits != null) {
+
+for (OwnerPet.Visit visit : visits) {
+
+pet.addVisit(visit);
+
+}
+
+}
+
+this.addPet(pet); // Chama o método acima
+
+}
+
+
+
+}

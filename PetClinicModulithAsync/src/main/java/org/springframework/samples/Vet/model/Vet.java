@@ -10,6 +10,7 @@ import org.springframework.beans.support.PropertyComparator;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.function.IntPredicate;
 
 @Getter
 public class Vet implements Serializable {
@@ -87,5 +88,17 @@ public class Vet implements Serializable {
 		// TODO Auto-generated method stub
 		return this.id;
 	}
+
+	public String getFirstName() {
+		// TODO Auto-generated method stub
+		return this.firstName;
+	}
+	
+	public String getLastName() {
+		// TODO Auto-generated method stub
+		return this.lastName;
+	}
+	
+	
 
 }

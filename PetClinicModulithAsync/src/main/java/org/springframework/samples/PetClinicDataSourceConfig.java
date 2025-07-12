@@ -14,10 +14,32 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import javax.sql.DataSource;
+
+import java.sql.Connection;
+import java.sql.Statement;
 import java.util.List;
 
 @Configuration(proxyBeanMethods = false)
 public class PetClinicDataSourceConfig {
+	
+	private void cleanupTables(DataSource dataSource, String... tables) {
+	    try {
+	        Connection conn = dataSource.getConnection();
+	        Statement stmt = conn.createStatement();
+	        // Desativar temporariamente as restrições de chave estrangeira
+	        stmt.execute("SET REFERENTIAL_INTEGRITY FALSE");
+	        // Remover tabelas na ordem especificada
+	        for (String table : tables) {
+	            stmt.execute("DROP TABLE IF EXISTS " + table);
+	        }
+	        // Reativar as restrições
+	        stmt.execute("SET REFERENTIAL_INTEGRITY TRUE");
+	        stmt.close();
+	        conn.close();
+	    } catch (Exception e) {
+	        System.err.println("Erro ao limpar tabelas: " + e.getMessage());
+	    }
+	}
 
     //OWNER ------------------------------------------------------------------------------------
 
@@ -38,7 +60,9 @@ public class PetClinicDataSourceConfig {
 
     @Bean
     DataSourceScriptDatabaseInitializer ownerDataSourceScriptDatabaseInitializer(@Qualifier("ownerDataSource") DataSource dataSource) {
-        var settings = new DatabaseInitializationSettings();
+    	cleanupTables(dataSource, "owners");
+    	
+    	var settings = new DatabaseInitializationSettings();
         settings.setSchemaLocations(List.of("classpath*:db/Owner/schema.sql"));
         settings.setDataLocations(List.of("classpath*:db/Owner/data.sql"));
         settings.setMode(DatabaseInitializationMode.EMBEDDED);
@@ -55,17 +79,18 @@ public class PetClinicDataSourceConfig {
 
     @Bean
     public DataSource petDataSource(@Qualifier("petDataSourceProperties") DataSourceProperties petDataSourceProperties) {
-        return DataSourceBuilder
-                .create()
-                .url(petDataSourceProperties.getUrl())
-                .username(petDataSourceProperties.getUsername())
-                .password(petDataSourceProperties.getPassword())
+        return petDataSourceProperties
+                .initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
                 .build();
     }
 
+
     @Bean
     DataSourceScriptDatabaseInitializer petDataSourceScriptDatabaseInitializer(@Qualifier("petDataSource") DataSource dataSource) {
-        var settings = new DatabaseInitializationSettings();
+    	cleanupTables(dataSource, "pet_visit", "pets", "types");
+    	
+    	var settings = new DatabaseInitializationSettings();
         settings.setSchemaLocations(List.of("classpath*:db/Pet/schema.sql"));
         settings.setDataLocations(List.of("classpath*:db/Pet/data.sql"));
         settings.setMode(DatabaseInitializationMode.EMBEDDED);
@@ -80,19 +105,17 @@ public class PetClinicDataSourceConfig {
         return new DataSourceProperties();
     }
 
+    
     @Bean
-    public DataSource vetDataSource(@Qualifier("vetDataSourceProperties") DataSourceProperties vetDataSourceProperties) {
-        return DataSourceBuilder
-                .create()
-                .url(vetDataSourceProperties.getUrl())
-                .username(vetDataSourceProperties.getUsername())
-                .password(vetDataSourceProperties.getPassword())
-                .build();
+    public DataSource vetDataSource(@Qualifier("vetDataSourceProperties") DataSourceProperties props) {
+        return props.initializeDataSourceBuilder().type(HikariDataSource.class).build();
     }
 
     @Bean
     DataSourceScriptDatabaseInitializer vetDataSourceScriptDatabaseInitializer(@Qualifier("vetDataSource") DataSource dataSource) {
-        var settings = new DatabaseInitializationSettings();
+    	cleanupTables(dataSource, "vet_specialties", "vets", "specialties");
+    	
+    	var settings = new DatabaseInitializationSettings();
         settings.setSchemaLocations(List.of("classpath*:db/Vet/schema.sql"));
         settings.setDataLocations(List.of("classpath*:db/Vet/data.sql"));
         settings.setMode(DatabaseInitializationMode.EMBEDDED);
@@ -106,20 +129,18 @@ public class PetClinicDataSourceConfig {
     public DataSourceProperties visitDataSourceProperties(){
         return new DataSourceProperties();
     }
+    
 
     @Bean
-    public DataSource visitDataSource(@Qualifier("visitDataSourceProperties") DataSourceProperties visitDataSourceProperties) {
-        return DataSourceBuilder
-                .create()
-                .url(visitDataSourceProperties.getUrl())
-                .username(visitDataSourceProperties.getUsername())
-                .password(visitDataSourceProperties.getPassword())
-                .build();
+    public DataSource visitDataSource(@Qualifier("visitDataSourceProperties") DataSourceProperties props) {
+        return props.initializeDataSourceBuilder().type(HikariDataSource.class).build();
     }
 
     @Bean
     DataSourceScriptDatabaseInitializer visitDataSourceScriptDatabaseInitializer(@Qualifier("visitDataSource") DataSource dataSource) {
-        var settings = new DatabaseInitializationSettings();
+    	cleanupTables(dataSource, "visits");
+    	
+    	var settings = new DatabaseInitializationSettings();
         settings.setSchemaLocations(List.of("classpath*:db/Visit/schema.sql"));
         settings.setDataLocations(List.of("classpath*:db/Visit/data.sql"));
         settings.setMode(DatabaseInitializationMode.EMBEDDED);

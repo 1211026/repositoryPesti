@@ -24,7 +24,7 @@ public interface OwnerRepository extends Repository<Owner, Integer> {
 
 	@Query("SELECT DISTINCT owner FROM Owner owner left join  owner.pets WHERE owner.lastName LIKE :lastName% ")
 	@Transactional(readOnly = true)
-	Page<Owner> findByLastName(@Param("lastName") String lastName, Pageable pageable);
+	Page<Owner> findByLastName(@Param("lastName") String lastName,Pageable pageable);
 
 	@Query("SELECT owner FROM Owner owner left join fetch owner.pets WHERE owner.id =:id")
 	@Transactional(readOnly = true)
@@ -40,5 +40,7 @@ public interface OwnerRepository extends Repository<Owner, Integer> {
 	@Query("SELECT pet FROM Pet pet WHERE pet.id =:id")
 	@Transactional(readOnly = true)
 	Pet findPetById(@Param("id") Integer id);
+	
+	
 
 }

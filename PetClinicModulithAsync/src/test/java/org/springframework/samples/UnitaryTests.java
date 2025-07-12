@@ -6,6 +6,8 @@ import jakarta.validation.Validator;
 import org.junit.Test;
 import org.springframework.samples.Owner.model.Owner;
 import org.springframework.samples.Owner.model.OwnerPet;
+import org.springframework.samples.Owner.service.OwnerManagement;
+import org.springframework.samples.Owner.service.OwnerRepository;
 import org.springframework.samples.Pet.model.Pet;
 import org.springframework.samples.Pet.model.PetType;
 import org.springframework.samples.Vet.model.Specialty;
@@ -24,6 +26,8 @@ public class UnitaryTests {
 
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+    
+
 
     @Test
     public void testOwnerSetId() {
@@ -374,4 +378,6 @@ public class UnitaryTests {
         Set<ConstraintViolation<Visit>> violations = validator.validate(visit);
         assertEquals(1, violations.size());
     }
+    
+    
 }

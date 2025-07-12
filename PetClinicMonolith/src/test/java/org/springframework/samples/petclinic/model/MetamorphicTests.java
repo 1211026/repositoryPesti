@@ -55,23 +55,23 @@ public class MetamorphicTests {
     void addOwnerIncreasesTotal(@ForAll("validOwnerData") Owner newOwner) {
         logToSwagger("Teste: Adicionar owner via formulário MVC");
         try {
-            // Obter contagem inicial de owners
+          
             int initialCount = getOwnerCountViaFind();
             System.out.println("Contagem inicial de owners: " + initialCount);
             
-            // Preparar owner com nome único
+     
             String uniquePrefix = "MVC_" + UUID.randomUUID().toString().substring(0, 6);
             newOwner.setFirstName(uniquePrefix + "_" + newOwner.getFirstName());
             newOwner.setLastName("Owner_" + newOwner.getLastName());
             
-            // Garantir campos obrigatórios
+   
             if (newOwner.getAddress() == null) newOwner.setAddress("Test Address");
             if (newOwner.getCity() == null) newOwner.setCity("Test City");
             if (newOwner.getTelephone() == null) newOwner.setTelephone("1234567890");
             
             System.out.println("Criando owner: " + newOwner.getFirstName() + " " + newOwner.getLastName());
 
-            // Preparar requisição para o endpoint MVC
+   
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             
@@ -84,14 +84,14 @@ public class MetamorphicTests {
             
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formData, headers);
             
-            // Enviar formulário
+          
             ResponseEntity<String> response = restTemplate.postForEntity(
                 "http://localhost:8080/owners/new",
                 requestEntity,
                 String.class
             );
             
-            // Extrair ID do owner do redirecionamento
+            
             int ownerId = -1;
             if (response.getHeaders().getLocation() != null) {
                 String redirectUrl = response.getHeaders().getLocation().toString();
@@ -106,7 +106,7 @@ public class MetamorphicTests {
             
             assertThat(ownerId).isGreaterThan(0);
             
-            // Verificar aumento na contagem
+            
             int finalCount = getOwnerCountViaFind();
             System.out.println("Contagem final de owners: " + finalCount);
             
@@ -183,7 +183,7 @@ public class MetamorphicTests {
             System.err.println("Error in getSameOwnerTwiceYieldsSameResult: " + e.getMessage());
             e.printStackTrace();
             logToSwagger("Test failed: getSameOwnerTwiceYieldsSameResult - " + e.getMessage());
-            // Pular o teste em caso de erro do servidor
+            
             Assume.that(false);
         }
     }
@@ -438,7 +438,7 @@ public class MetamorphicTests {
     @Step("Teste: Subconjunto de veterinários está contido no conjunto completo")
     void vetSubsetIsContainedInFullSet(@ForAll @IntRange(min = 1, max = 3) int subsetSize) {
         try {
-            // Configurar cabeçalhos para aceitar JSON explicitamente
+            
             HttpHeaders headers = new HttpHeaders();
             headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
             HttpEntity<String> entity = new HttpEntity<>(headers);
@@ -499,7 +499,7 @@ public class MetamorphicTests {
         } catch (Exception e) {
             System.err.println("Error in vetSubsetIsContainedInFullSet: " + e.getMessage());
             e.printStackTrace();
-            // Pular o teste em caso de erro do servidor
+            
             System.out.println("Skipping test due to server error: " + e.getMessage());
             Assume.that(false);
         }
@@ -507,7 +507,7 @@ public class MetamorphicTests {
 
     @Property(tries = 5)
     @Step("Teste: Busca com prefixo mais longo é subconjunto")
-    void searchWithLongerFirstNameIsSubset(@ForAll("prefixLetter") String prefix, 
+    void searchWithLongerLastNameIsSubset(@ForAll("prefixLetter") String prefix, 
                                          @ForAll("secondLetter") String second) {
         try {
           
@@ -606,211 +606,12 @@ public class MetamorphicTests {
         }
     }
 
-    /**
-     * Método simplificado para obter a contagem de visitas via páginas de owners
-     */
-    private int getVisitCountViaOwners() {
-        try {
-            int totalVisits = 0;
-            
-            // Verificar os primeiros 30 owners (aumentei o limite para garantir)
-            for (int i = 1; i <= 30; i++) {
-                try {
-                    ResponseEntity<String> ownerPage = restTemplate.getForEntity(
-                        "http://localhost:8080/owners/" + i, 
-                        String.class
-                    );
-                    
-                    if (ownerPage.getStatusCode().is2xxSuccessful() && ownerPage.getBody() != null) {
-                        String html = ownerPage.getBody();
-                        
-                        // Contar as entradas de visitas na tabela
-                        Pattern pattern = Pattern.compile("<tr>\\s*<td>\\d{4}-\\d{2}-\\d{2}</td>\\s*<td>.*?</td>");
-                        Matcher matcher = pattern.matcher(html);
-                        
-                        while (matcher.find()) {
-                            totalVisits++;
-                        }
-                    }
-                } catch (Exception e) {
-                    // Continuar para o próximo owner se houver erro
-                }
-            }
-            
-            System.out.println("Contagem de visitas via páginas de owners: " + totalVisits);
-            return totalVisits;
-        } catch (Exception e) {
-            System.out.println("Erro ao contar visitas: " + e.getMessage());
-            return 0;
-        }
-    }
-    /**
-     * Método para obter a contagem de visitas usando várias abordagens
-     */
-    private int getVisitCountForPet() {
-        // Lista de abordagens para tentar obter o total de visitas
-        List<Supplier<Integer>> approaches = new ArrayList<>();
-        
-        // Abordagem 1: Verificar diretamente a página de visitas
-        approaches.add(() -> {
-            try {
-                ResponseEntity<String> response = restTemplate.getForEntity(
-                    "http://localhost:8080/vets.html", 
-                    String.class
-                );
-                
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    String html = response.getBody();
-                    
-                    // Contar as entradas de visitas na tabela de veterinários
-                    // (assumindo que há alguma relação entre visitas e veterinários na UI)
-                    Pattern pattern = Pattern.compile("<tr>\\s*<td>.*?</td>\\s*<td>.*?</td>");
-                    Matcher matcher = pattern.matcher(html);
-                    
-                    int count = 0;
-                    while (matcher.find()) {
-                        count++;
-                    }
-                    
-                    System.out.println("Contagem de visitas via página de veterinários: " + count);
-                    return count;
-                }
-            } catch (Exception e) {
-                System.out.println("Abordagem 1 falhou: " + e.getMessage());
-            }
-            return -1;
-        });
-        
-        // Abordagem 2: Verificar a página de cada owner e contar visitas
-        approaches.add(() -> {
-            try {
-                int totalVisits = 0;
-                
-                // Verificar os primeiros 20 owners
-                for (int i = 1; i <= 20; i++) {
-                    try {
-                        ResponseEntity<String> ownerPage = restTemplate.getForEntity(
-                            "http://localhost:8080/owners/" + i, 
-                            String.class
-                        );
-                        
-                        if (ownerPage.getStatusCode().is2xxSuccessful() && ownerPage.getBody() != null) {
-                            String html = ownerPage.getBody();
-                            
-                            // Contar as entradas de visitas na tabela
-                            Pattern pattern = Pattern.compile("<tr>\\s*<td>\\d{4}-\\d{2}-\\d{2}</td>\\s*<td>.*?</td>");
-                            Matcher matcher = pattern.matcher(html);
-                            
-                            while (matcher.find()) {
-                                totalVisits++;
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Continuar para o próximo owner se houver erro
-                    }
-                }
-                
-                if (totalVisits > 0) {
-                    System.out.println("Contagem de visitas via páginas de owners: " + totalVisits);
-                    return totalVisits;
-                }
-            } catch (Exception e) {
-                System.out.println("Abordagem 2 falhou: " + e.getMessage());
-            }
-            return -1;
-        });
-        
-        // Abordagem 3: Verificar diretamente o último ID de visita
-        approaches.add(() -> {
-            try {
-                int lastVisitId = 0;
-                
-                // Verificar os últimos IDs de visitas
-                for (int i = 1; i <= 100; i++) {
-                    try {
-                        // Tentar acessar a visita diretamente (se houver um endpoint para isso)
-                        ResponseEntity<Visit> response = restTemplate.getForEntity(
-                            "http://localhost:8080/visits/" + i, 
-                            Visit.class
-                        );
-                        
-                        if (response.getStatusCode().is2xxSuccessful()) {
-                            lastVisitId = i;
-                        }
-                    } catch (Exception e) {
-                        // Ignorar erros e continuar
-                    }
-                }
-                
-                if (lastVisitId > 0) {
-                    System.out.println("Último ID de visita encontrado: " + lastVisitId);
-                    return lastVisitId;
-                }
-            } catch (Exception e) {
-                System.out.println("Abordagem 3 falhou: " + e.getMessage());
-            }
-            return -1;
-        });
-        
-        // Tentar cada abordagem até encontrar uma que funcione
-        for (Supplier<Integer> approach : approaches) {
-            int count = approach.get();
-            if (count >= 0) {
-                return count;
-            }
-        }
-        
-        // Se todas as abordagens falharem, tentar uma última abordagem
-        try {
-            // Verificar a página inicial para tentar encontrar alguma informação sobre visitas
-            ResponseEntity<String> homeResponse = restTemplate.getForEntity(
-                "http://localhost:8080/", 
-                String.class
-            );
-            
-            if (homeResponse.getStatusCode().is2xxSuccessful() && homeResponse.getBody() != null) {
-                // Verificar se há alguma estatística ou contador na página inicial
-                String html = homeResponse.getBody();
-                Pattern pattern = Pattern.compile("\\b(\\d+)\\s+visits\\b", Pattern.CASE_INSENSITIVE);
-                Matcher matcher = pattern.matcher(html);
-                
-                if (matcher.find()) {
-                    int count = Integer.parseInt(matcher.group(1));
-                    System.out.println("Contagem de visitas via página inicial: " + count);
-                    return count;
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Abordagem final falhou: " + e.getMessage());
-        }
-        
-        // Se tudo falhar, usar o ID da última visita criada como estimativa
-        try {
-        	String visitUrl = "http://localhost:8080/visits"; // URL base para visitas
-            ResponseEntity<Visit> response = restTemplate.getForEntity(
-                visitUrl + "/5", // Tentar o ID 5 que vimos no log
-                Visit.class
-            );
-            
-            if (response.getStatusCode().is2xxSuccessful()) {
-                System.out.println("Usando ID 5 como estimativa de contagem");
-                return 5;
-            }
-        } catch (Exception e) {
-            // Ignorar
-        }
-        
-        System.out.println("Todas as abordagens falharam, retornando 0");
-        return 0;
-    }
-            
-
-    
+   
 
 	@Property(tries = 5)
     @Step("Teste: Repetir lista de pets deve ser igual")
     void repeatedPetListShouldBeEqual(@ForAll("validOwnerData") Owner newOwner) {
-        // Configurar o owner com um prefixo para identificação
+        
         newOwner.setFirstName("RepeatOwner_" + newOwner.getFirstName());
         newOwner.setLastName("RepeatTest_" + newOwner.getLastName());
         
@@ -1486,6 +1287,207 @@ public class MetamorphicTests {
          throw e;
      }
  }
+ 
+ /**
+  * Método simplificado para obter a contagem de visitas via páginas de owners
+  */
+ private int getVisitCountViaOwners() {
+     try {
+         int totalVisits = 0;
+         
+         // Verificar os primeiros 30 owners (aumentei o limite para garantir)
+         for (int i = 1; i <= 30; i++) {
+             try {
+                 ResponseEntity<String> ownerPage = restTemplate.getForEntity(
+                     "http://localhost:8080/owners/" + i, 
+                     String.class
+                 );
+                 
+                 if (ownerPage.getStatusCode().is2xxSuccessful() && ownerPage.getBody() != null) {
+                     String html = ownerPage.getBody();
+                     
+                     // Contar as entradas de visitas na tabela
+                     Pattern pattern = Pattern.compile("<tr>\\s*<td>\\d{4}-\\d{2}-\\d{2}</td>\\s*<td>.*?</td>");
+                     Matcher matcher = pattern.matcher(html);
+                     
+                     while (matcher.find()) {
+                         totalVisits++;
+                     }
+                 }
+             } catch (Exception e) {
+                 // Continuar para o próximo owner se houver erro
+             }
+         }
+         
+         System.out.println("Contagem de visitas via páginas de owners: " + totalVisits);
+         return totalVisits;
+     } catch (Exception e) {
+         System.out.println("Erro ao contar visitas: " + e.getMessage());
+         return 0;
+     }
+ }
+ /**
+  * Método para obter a contagem de visitas usando várias abordagens
+  */
+ private int getVisitCountForPet() {
+     // Lista de abordagens para tentar obter o total de visitas
+     List<Supplier<Integer>> approaches = new ArrayList<>();
+     
+     // Abordagem 1: Verificar diretamente a página de visitas
+     approaches.add(() -> {
+         try {
+             ResponseEntity<String> response = restTemplate.getForEntity(
+                 "http://localhost:8080/vets.html", 
+                 String.class
+             );
+             
+             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                 String html = response.getBody();
+                 
+                 // Contar as entradas de visitas na tabela de veterinários
+                 // (assumindo que há alguma relação entre visitas e veterinários na UI)
+                 Pattern pattern = Pattern.compile("<tr>\\s*<td>.*?</td>\\s*<td>.*?</td>");
+                 Matcher matcher = pattern.matcher(html);
+                 
+                 int count = 0;
+                 while (matcher.find()) {
+                     count++;
+                 }
+                 
+                 System.out.println("Contagem de visitas via página de veterinários: " + count);
+                 return count;
+             }
+         } catch (Exception e) {
+             System.out.println("Abordagem 1 falhou: " + e.getMessage());
+         }
+         return -1;
+     });
+     
+     // Abordagem 2: Verificar a página de cada owner e contar visitas
+     approaches.add(() -> {
+         try {
+             int totalVisits = 0;
+             
+             // Verificar os primeiros 20 owners
+             for (int i = 1; i <= 20; i++) {
+                 try {
+                     ResponseEntity<String> ownerPage = restTemplate.getForEntity(
+                         "http://localhost:8080/owners/" + i, 
+                         String.class
+                     );
+                     
+                     if (ownerPage.getStatusCode().is2xxSuccessful() && ownerPage.getBody() != null) {
+                         String html = ownerPage.getBody();
+                         
+                         // Contar as entradas de visitas na tabela
+                         Pattern pattern = Pattern.compile("<tr>\\s*<td>\\d{4}-\\d{2}-\\d{2}</td>\\s*<td>.*?</td>");
+                         Matcher matcher = pattern.matcher(html);
+                         
+                         while (matcher.find()) {
+                             totalVisits++;
+                         }
+                     }
+                 } catch (Exception e) {
+                     // Continuar para o próximo owner se houver erro
+                 }
+             }
+             
+             if (totalVisits > 0) {
+                 System.out.println("Contagem de visitas via páginas de owners: " + totalVisits);
+                 return totalVisits;
+             }
+         } catch (Exception e) {
+             System.out.println("Abordagem 2 falhou: " + e.getMessage());
+         }
+         return -1;
+     });
+     
+     // Abordagem 3: Verificar diretamente o último ID de visita
+     approaches.add(() -> {
+         try {
+             int lastVisitId = 0;
+             
+             // Verificar os últimos IDs de visitas
+             for (int i = 1; i <= 100; i++) {
+                 try {
+                     // Tentar acessar a visita diretamente (se houver um endpoint para isso)
+                     ResponseEntity<Visit> response = restTemplate.getForEntity(
+                         "http://localhost:8080/visits/" + i, 
+                         Visit.class
+                     );
+                     
+                     if (response.getStatusCode().is2xxSuccessful()) {
+                         lastVisitId = i;
+                     }
+                 } catch (Exception e) {
+                     // Ignorar erros e continuar
+                 }
+             }
+             
+             if (lastVisitId > 0) {
+                 System.out.println("Último ID de visita encontrado: " + lastVisitId);
+                 return lastVisitId;
+             }
+         } catch (Exception e) {
+             System.out.println("Abordagem 3 falhou: " + e.getMessage());
+         }
+         return -1;
+     });
+     
+     // Tentar cada abordagem até encontrar uma que funcione
+     for (Supplier<Integer> approach : approaches) {
+         int count = approach.get();
+         if (count >= 0) {
+             return count;
+         }
+     }
+     
+     // Se todas as abordagens falharem, tentar uma última abordagem
+     try {
+         // Verificar a página inicial para tentar encontrar alguma informação sobre visitas
+         ResponseEntity<String> homeResponse = restTemplate.getForEntity(
+             "http://localhost:8080/", 
+             String.class
+         );
+         
+         if (homeResponse.getStatusCode().is2xxSuccessful() && homeResponse.getBody() != null) {
+             // Verificar se há alguma estatística ou contador na página inicial
+             String html = homeResponse.getBody();
+             Pattern pattern = Pattern.compile("\\b(\\d+)\\s+visits\\b", Pattern.CASE_INSENSITIVE);
+             Matcher matcher = pattern.matcher(html);
+             
+             if (matcher.find()) {
+                 int count = Integer.parseInt(matcher.group(1));
+                 System.out.println("Contagem de visitas via página inicial: " + count);
+                 return count;
+             }
+         }
+     } catch (Exception e) {
+         System.out.println("Abordagem final falhou: " + e.getMessage());
+     }
+     
+     // Se tudo falhar, usar o ID da última visita criada como estimativa
+     try {
+     	String visitUrl = "http://localhost:8080/visits"; // URL base para visitas
+         ResponseEntity<Visit> response = restTemplate.getForEntity(
+             visitUrl + "/5", // Tentar o ID 5 que vimos no log
+             Visit.class
+         );
+         
+         if (response.getStatusCode().is2xxSuccessful()) {
+             System.out.println("Usando ID 5 como estimativa de contagem");
+             return 5;
+         }
+     } catch (Exception e) {
+         // Ignorar
+     }
+     
+     System.out.println("Todas as abordagens falharam, retornando 0");
+     return 0;
+ }
+         
+
+ 
 
     // ---------------------- Geradores ----------------------
 

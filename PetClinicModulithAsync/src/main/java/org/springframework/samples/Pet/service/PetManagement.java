@@ -15,6 +15,7 @@ import org.springframework.samples.notifications.AddVisitEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -52,15 +53,45 @@ public class PetManagement implements PetExternalAPI {
 	@Override
 	@Transactional
 	public void save(Pet pet) {
-		boolean isNew = (pet.getId() == null);
-		petRepository.save(pet, isNew);
-		events.publishEvent(new SavePetEvent(pet.getId(), pet.getName(), pet.getBirthDate(), pet.getType().getId(),
-				pet.getType().getName(), pet.getOwner_id(), isNew));
+	    System.out.println("Iniciando salvamento de pet: name=" + pet.getName() + 
+	                      ", owner_id=" + pet.getOwner_id());
+	    
+	    boolean isNew = (pet.getId() == null);
+	    
+	    try {
+	        // Salvar o pet no repositório local
+	        petRepository.save(pet, isNew);  // Método retorna void
+	        System.out.println("Pet salvo no repositório local: id=" + pet.getId());
+	        
+	        // Publicar evento para notificar outros módulos
+	        Integer petId = pet.getId();
+	        String petName = pet.getName();
+	        LocalDate birthDate = pet.getBirthDate();
+	        Integer typeId = pet.getType() != null ? pet.getType().getId() : null;
+	        String typeName = pet.getType() != null ? pet.getType().getName() : null;
+	        Integer ownerId = pet.getOwner_id();
+	        
+	        SavePetEvent event = new SavePetEvent(petId, petName, birthDate, typeId, typeName, ownerId, isNew);
+	        System.out.println("Publicando evento SavePetEvent: id=" + petId + 
+	                          ", name=" + petName + 
+	                          ", owner_id=" + ownerId);
+	        events.publishEvent(event);
+	        System.out.println("Evento SavePetEvent publicado com sucesso");
+	    } catch (Exception e) {
+	        System.err.println("Erro ao salvar pet ou publicar evento: " + e.getMessage());
+	        e.printStackTrace();
+	        throw e;
+	    }
 	}
 
 	@ApplicationModuleListener
 	void onNewVisitEvent(AddVisitEvent event) {
 		petRepository.save(new Pet.Visit(event.getId(), event.getDescription(), event.getDate(), event.getPet_id()));
 		events.publishEvent(new AddVisitPet(event.getId(), event.getDate(), event.getDescription(), event.getPet_id()));
+	}
+	
+	@Override
+	public Pet findById(int petId) {
+	    return petRepository.findById(petId);
 	}
 }

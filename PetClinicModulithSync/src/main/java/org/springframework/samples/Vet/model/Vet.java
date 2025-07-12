@@ -85,6 +85,18 @@ public class Vet{
 		// TODO Auto-generated method stub
 		return this.id;
 	}
+
+	public  String getFirstName() {
+		// TODO Auto-generated method stub
+		return this.firstName;
+		
+	}
+	
+	public  String getLastName() {
+		// TODO Auto-generated method stub
+		return this.lastName;
+		
+	}
 	
 	
 

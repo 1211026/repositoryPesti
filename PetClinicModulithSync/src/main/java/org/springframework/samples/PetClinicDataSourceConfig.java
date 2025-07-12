@@ -50,11 +50,7 @@ public class PetClinicDataSourceConfig {
         return new DataSourceScriptDatabaseInitializer(dataSource, settings);
     }
     
- // Adicione este método para criar o JdbcTemplate para o owner
-    @Bean(name = "ownerJdbcTemplate")
-    public JdbcTemplate ownerJdbcTemplate(@Qualifier("ownerDataSource") DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
-    }
+
 
     //PET ------------------------------------------------------------------------------------
 
@@ -100,12 +96,7 @@ public class PetClinicDataSourceConfig {
         
         return new DataSourceScriptDatabaseInitializer(dataSource, settings);
     }
-    
- // Adicione este método para criar o JdbcTemplate para o pet
-    @Bean(name = "petJdbcTemplate")
-    public JdbcTemplate petJdbcTemplate(@Qualifier("petDataSource") DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
-    }
+
 
     //VET ------------------------------------------------------------------------------------
 
@@ -134,11 +125,7 @@ public class PetClinicDataSourceConfig {
         return new DataSourceScriptDatabaseInitializer(dataSource, settings);
     }
     
- // Adicione este método para criar o JdbcTemplate para o vet
-    @Bean(name = "vetJdbcTemplate")
-    public JdbcTemplate vetJdbcTemplate(@Qualifier("vetDataSource") DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
-    }
+ 
 
     //VISIT ------------------------------------------------------------------------------------
 
@@ -165,9 +152,5 @@ public class PetClinicDataSourceConfig {
         return new DataSourceScriptDatabaseInitializer(dataSource, settings);
     }
     
- // Adicione este método para criar o JdbcTemplate para o visit
-    @Bean(name = "visitJdbcTemplate")
-    public JdbcTemplate visitJdbcTemplate(@Qualifier("visitDataSource") DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
-    }
+ 
 }

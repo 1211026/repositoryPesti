@@ -16,4 +16,6 @@ public interface PetExternalAPI {
 
 	void save(Pet pet);
 
+	Pet findById(int petId);
+
 }
